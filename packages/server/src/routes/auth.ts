@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createUserSchema, loginSchema, updateUserSchema } from '@opusheart/shared';
+import { createUserSchema, loginSchema, updateUserSchema, mfaCodeSchema } from '@opusheart/shared';
 import { validate } from '../middleware/validate.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { AuthService, AppError } from '../services/auth.service.js';
@@ -121,6 +121,50 @@ export function authRoutes(config: AppConfig): Router {
       res.json({ user: user.toJSON() });
     } catch {
       res.status(500).json({ error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } });
+    }
+  });
+
+  // ── MFA (TOTP) ──────────────────────────────────────────
+
+  // POST /api/auth/mfa/enroll — begin enrollment, returns otpauth URL for QR
+  router.post('/mfa/enroll', authenticate(config), async (req, res) => {
+    try {
+      const result = await authService.beginMfaEnrollment(req.user!.id);
+      res.json(result);
+    } catch (err) {
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({ error: { message: err.message, code: err.code } });
+      } else {
+        res.status(500).json({ error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } });
+      }
+    }
+  });
+
+  // POST /api/auth/mfa/confirm — confirm enrollment with a code from the app
+  router.post('/mfa/confirm', authenticate(config), validate(mfaCodeSchema), async (req, res) => {
+    try {
+      await authService.confirmMfa(req.user!.id, req.body.code);
+      res.json({ message: 'MFA enabled' });
+    } catch (err) {
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({ error: { message: err.message, code: err.code } });
+      } else {
+        res.status(500).json({ error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } });
+      }
+    }
+  });
+
+  // POST /api/auth/mfa/disable — disable MFA (requires a valid current code)
+  router.post('/mfa/disable', authenticate(config), validate(mfaCodeSchema), async (req, res) => {
+    try {
+      await authService.disableMfa(req.user!.id, req.body.code);
+      res.json({ message: 'MFA disabled' });
+    } catch (err) {
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({ error: { message: err.message, code: err.code } });
+      } else {
+        res.status(500).json({ error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } });
+      }
     }
   });
 

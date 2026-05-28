@@ -51,6 +51,10 @@ export const loginSchema = z.object({
   mfaCode: z.string().length(6).regex(/^\d{6}$/).optional(),
 });
 
+export const mfaCodeSchema = z.object({
+  code: z.string().regex(/^\d{6}$/, 'MFA code must be 6 digits'),
+});
+
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(10).max(128)
@@ -63,3 +67,4 @@ export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type AssignRoleInput = z.infer<typeof assignRoleSchema>;
+export type MfaCodeInput = z.infer<typeof mfaCodeSchema>;

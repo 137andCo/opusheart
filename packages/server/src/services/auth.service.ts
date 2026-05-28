@@ -1,7 +1,8 @@
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
-import { sha256 } from '@opusheart/shared';
+import * as OTPAuth from 'otpauth';
+import { sha256, decrypt } from '@opusheart/shared';
 import { User, type IUserDocument } from '../models/User.js';
 import { RefreshToken } from '../models/RefreshToken.js';
 import type { AppConfig } from '../config/index.js';
@@ -73,6 +74,86 @@ export class AuthService {
     return user;
   }
 
+  // ── MFA / TOTP ───────────────────────────────────────────
+  // Standard RFC 6238 TOTP. The otpauth:// URL returned by enroll is scanned as a
+  // QR code by any authenticator app (Google Authenticator, Authy, 1Password…).
+
+  private buildTotp(secretBase32: string): OTPAuth.TOTP {
+    return new OTPAuth.TOTP({
+      issuer: this.config.instance.name || 'OpusHeart',
+      label: 'OpusHeart',
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secretBase32),
+    });
+  }
+
+  /**
+   * The encryption plugin only decrypts on toJSON/toObject, so a secret read off
+   * a freshly-fetched document is still ciphertext. Resolve it to the plaintext
+   * base32 either way: try to decrypt, and fall back to the raw value if it was
+   * never encrypted (defensive — should always be encrypted at rest).
+   */
+  private resolveSecret(stored: string): string {
+    try {
+      return decrypt(stored, this.config.encryption.key);
+    } catch {
+      return stored;
+    }
+  }
+
+  private verifyTotp(storedSecret: string, code: string): boolean {
+    const totp = this.buildTotp(this.resolveSecret(storedSecret));
+    // window:1 tolerates ±1 step (30s) of clock drift; delta===null means no match.
+    return totp.validate({ token: code.trim(), window: 1 }) !== null;
+  }
+
+  /**
+   * Begin MFA enrollment: generate a secret, store it (encrypted at rest), and
+   * return the otpauth URL + base32 secret for the user's authenticator app.
+   * mfaEnabled stays false until the user confirms a code via confirmMfa().
+   */
+  async beginMfaEnrollment(userId: string): Promise<{ otpauthUrl: string; secret: string }> {
+    const user = await User.findById(userId);
+    if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
+    if (user.mfaEnabled) throw new AppError('MFA is already enabled', 409, 'MFA_ALREADY_ENABLED');
+
+    const secret = new OTPAuth.Secret({ size: 20 });
+    const totp = this.buildTotp(secret.base32);
+
+    user.mfaSecret = secret.base32; // encrypted by the model plugin on save
+    user.mfaEnabled = false;
+    await user.save();
+
+    return { otpauthUrl: totp.toString(), secret: secret.base32 };
+  }
+
+  /** Confirm enrollment by validating a code against the pending secret. */
+  async confirmMfa(userId: string, code: string): Promise<void> {
+    const user = await User.findById(userId);
+    if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
+    if (!user.mfaSecret) throw new AppError('MFA enrollment not started', 400, 'MFA_NOT_ENROLLING');
+    if (!this.verifyTotp(user.mfaSecret, code)) {
+      throw new AppError('Invalid MFA code', 400, 'INVALID_MFA_CODE');
+    }
+    user.mfaEnabled = true;
+    await user.save();
+  }
+
+  /** Disable MFA — requires a valid current code to prevent lockout abuse. */
+  async disableMfa(userId: string, code: string): Promise<void> {
+    const user = await User.findById(userId);
+    if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
+    if (!user.mfaEnabled || !user.mfaSecret) throw new AppError('MFA is not enabled', 400, 'MFA_NOT_ENABLED');
+    if (!this.verifyTotp(user.mfaSecret, code)) {
+      throw new AppError('Invalid MFA code', 400, 'INVALID_MFA_CODE');
+    }
+    user.mfaEnabled = false;
+    user.mfaSecret = undefined;
+    await user.save();
+  }
+
   async login(
     email: string,
     password: string,
@@ -89,14 +170,14 @@ export class AuthService {
       throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
     }
 
-    // MFA check
+    // MFA check — TOTP (RFC 6238), compatible with any authenticator app.
     if (user.mfaEnabled) {
       if (!mfaCode) {
         throw new AppError('MFA code required', 401, 'MFA_REQUIRED');
       }
-      // MFA is enabled but TOTP verification is not yet implemented.
-      // Reject login until TOTP is properly configured to prevent false security.
-      throw new AppError('MFA verification is not yet available. Contact your administrator.', 501, 'MFA_NOT_IMPLEMENTED');
+      if (!user.mfaSecret || !this.verifyTotp(user.mfaSecret, mfaCode)) {
+        throw new AppError('Invalid MFA code', 401, 'INVALID_MFA_CODE');
+      }
     }
 
     user.lastLoginAt = new Date();
