@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+coverage/
+.nuxt/
+.output/
+.DS_Store
+Thumbs.db
+HANDOVER-*.md
+CLAUDE.md
+tasks/
+docs/plans/
+package-lock.json
+
+# Internal / agent tooling — never publish
+.claude/
+.playwright-mcp/
+*.local.json
+AUDIT*.md
+SECURITY-AUDIT*.md

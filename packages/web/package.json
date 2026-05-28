@@ -1,0 +1,21 @@
+{
+  "name": "@opusheart/web",
+  "version": "0.1.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "nuxi dev --port 3022",
+    "build": "nuxi build",
+    "preview": "nuxi preview",
+    "test": "echo 'No tests yet'"
+  },
+  "dependencies": {
+    "@opusheart/shared": "workspace:*",
+    "nuxt": "^4.4.6"
+  },
+  "devDependencies": {
+    "@vite-pwa/nuxt": "^1.1.1",
+    "typescript": "^5.9.0"
+  }
+}

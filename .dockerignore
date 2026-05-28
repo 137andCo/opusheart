@@ -1,0 +1,11 @@
+node_modules
+dist
+.nuxt
+.output
+.git
+.env
+.env.local
+*.log
+coverage
+HANDOVER-*.md
+docs

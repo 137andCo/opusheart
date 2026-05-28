@@ -1,0 +1,17 @@
+{
+  "name": "@opusheart/ai",
+  "version": "0.1.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'No tests yet'",
+    "test:unit": "echo 'No tests yet'"
+  },
+  "dependencies": {
+    "@opusheart/shared": "workspace:*"
+  }
+}

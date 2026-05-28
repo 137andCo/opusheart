@@ -1,0 +1,26 @@
+{
+  "name": "@opusheart/shared",
+  "version": "0.1.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./types": "./dist/types/index.js",
+    "./schemas": "./dist/schemas/index.js",
+    "./schemas/*": "./dist/schemas/*",
+    "./constants": "./dist/constants/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "cd ../.. && npx eslint packages/shared/src",
+    "test": "cd ../.. && npx jest --config jest.config.ts packages/shared",
+    "test:unit": "cd ../.. && npx jest --config jest.config.ts packages/shared"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "name": "opusheart",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The heart of your community — a source-available community operating system",
+  "author": "137 & Co. <hello@137andco.com>",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "build": "pnpm -r --workspace-concurrency=1 run build",
+    "dev:server": "pnpm --filter @opusheart/server dev",
+    "dev:dashboard": "pnpm --filter @opusheart/dashboard dev",
+    "dev:web": "pnpm --filter @opusheart/web dev",
+    "test": "pnpm -r run test",
+    "test:unit": "pnpm -r run test:unit",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "pnpm -r run lint",
+    "seed": "pnpm --filter @opusheart/server seed",
+    "clean": "pnpm -r exec rm -rf dist node_modules"
+  },
+  "pnpm": {
+    "overrides": {
+      "handlebars@<4.7.9": ">=4.7.9",
+      "flatted@<3.4.2": ">=3.4.2",
+      "picomatch@<4.0.4": ">=4.0.4",
+      "brace-expansion@<2.0.3": ">=2.0.3",
+      "path-to-regexp@<8.4.0": ">=8.4.0",
+      "serialize-javascript@<7.0.3": ">=7.0.3",
+      "defu@<6.1.5": ">=6.1.5"
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@jest/globals": "^30.2.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.3.5",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "dotenv": "^17.3.1",
+    "eslint": "^10.0.2",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

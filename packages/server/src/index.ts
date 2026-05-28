@@ -1,0 +1,65 @@
+import dotenv from 'dotenv';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, '..', '.env') });
+
+import { loadConfig } from './config/index.js';
+import { connectDatabase } from './config/database.js';
+import { createRedisClient } from './config/redis.js';
+import { createApp } from './app.js';
+import { flushAuditLog } from './services/audit.service.js';
+import { aiManager } from '@opusheart/ai';
+import pino from 'pino';
+
+const logger = pino({ name: 'opusheart' });
+
+// Global error handlers — prevent silent crashes
+process.on('unhandledRejection', (reason) => {
+  logger.error({ err: reason }, 'Unhandled promise rejection');
+});
+
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'Uncaught exception — shutting down');
+  process.exit(1);
+});
+
+async function bootstrap(): Promise<void> {
+  const config = loadConfig();
+
+  await connectDatabase(config.mongo.uri);
+  createRedisClient(config.redis.url);
+
+  if (config.features.ai && process.env['AI_PROVIDER'] && process.env['AI_API_KEY']) {
+    aiManager.configure({
+      provider: process.env['AI_PROVIDER'],
+      baseUrl: process.env['AI_BASE_URL'],
+      apiKey: process.env['AI_API_KEY'],
+      model: process.env['AI_MODEL'] || 'gpt-4o-mini',
+    });
+    logger.info('AI configured: provider=%s model=%s', process.env['AI_PROVIDER'], process.env['AI_MODEL'] || 'gpt-4o-mini');
+  }
+
+  const app = createApp(config);
+
+  const server = app.listen(config.port, () => {
+    logger.info('OpusHeart server listening on port %d (%s)', config.port, config.nodeEnv);
+    logger.info('Instance: %s — Vertical: %s', config.instance.name, config.vertical);
+  });
+
+  // Graceful shutdown — flush any buffered audit entries before exit
+  const shutdown = async (signal: string): Promise<void> => {
+    logger.info('%s received — flushing audit log and shutting down', signal);
+    await flushAuditLog();
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 10000).unref();
+  };
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+}
+
+bootstrap().catch((err) => {
+  logger.error(err, 'Failed to start OpusHeart');
+  process.exit(1);
+});

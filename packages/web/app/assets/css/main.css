@@ -1,0 +1,83 @@
+:root {
+  --oh-primary: #4f46e5;
+  --oh-secondary: #7c3aed;
+  --oh-font: system-ui, -apple-system, sans-serif;
+  --oh-bg: #ffffff;
+  --oh-text: #1f2937;
+  --oh-muted: #6b7280;
+  --oh-border: #e5e7eb;
+  --oh-radius: 0.5rem;
+  --oh-surface: #f9fafb;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html {
+  font-family: var(--oh-font);
+  color: var(--oh-text);
+  background: var(--oh-bg);
+  line-height: 1.6;
+}
+
+[dir='rtl'] {
+  direction: rtl;
+  text-align: right;
+}
+
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: var(--oh-primary);
+  color: white;
+  font-weight: 600;
+  border-radius: 0 0 var(--oh-radius) 0;
+}
+
+.skip-to-content:focus {
+  left: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--oh-primary);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--oh-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
