@@ -4,6 +4,7 @@ import { validate } from '../middleware/validate.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { AuthService, AppError } from '../services/auth.service.js';
 import { auditByEmail } from '../services/auditContext.js';
+import { consentService } from '../services/consent.service.js';
 import { User } from '../models/User.js';
 import type { AppConfig } from '../config/index.js';
 
@@ -172,6 +173,8 @@ export function authRoutes(config: AppConfig): Router {
   router.put('/me', authenticate(config), validate(updateUserSchema), async (req, res) => {
     try {
       const user = await authService.updateProfile(req.user!.id, req.body);
+      // Preserve a history of consent changes (GDPR Art. 7 accountability).
+      await consentService.recordPrivacyChanges(req.user!.id, req.body.privacySettings, 'self-service', req.ip);
       res.json({ user: user.toJSON() });
     } catch (err) {
       if (err instanceof AppError) {

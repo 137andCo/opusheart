@@ -12,6 +12,7 @@ import { Event } from '../models/Event.js';
 import { Page } from '../models/Page.js';
 import { Sermon } from '../models/Sermon.js';
 import { ResourceSubmission } from '../models/ResourceSubmission.js';
+import { ConsentRecord } from '../models/ConsentRecord.js';
 
 export class PrivacyService {
   /**
@@ -40,6 +41,8 @@ export class PrivacyService {
       memberId ? Event.find({ 'rsvps.userId': memberId }).select('title startDate rsvps') : Promise.resolve([]),
     ]);
 
+    const consentHistory = await ConsentRecord.find({ userId }).sort({ createdAt: -1 }).limit(1000);
+
     // Household is reachable via the member's householdId.
     const household = member?.householdId
       ? await (await import('../models/Household.js')).Household.findById(member.householdId)
@@ -56,6 +59,7 @@ export class PrivacyService {
       groups: groups.map(g => g.toJSON()),
       bookings: bookings.map(b => b.toJSON()),
       messages: messages.map(m => m.toJSON()),
+      consentHistory: consentHistory.map(c => c.toJSON()),
       events: events.map(e => ({
         id: e._id,
         title: e.title,
@@ -90,6 +94,7 @@ export class PrivacyService {
       Booking.deleteMany({ bookedBy: userId }),
       ResourceSubmission.deleteMany({ submittedBy: userId }),
       Message.deleteMany({ sentBy: userId }),
+      ConsentRecord.deleteMany({ userId }),
 
       // Anonymize financial records (retain for tax/legal, drop the donor link)
       Donation.updateMany({ memberId: userId }, { $unset: { memberId: 1, notes: 1 } }),

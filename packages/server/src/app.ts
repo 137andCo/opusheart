@@ -30,6 +30,7 @@ import { givingRoutes } from './routes/giving.js';
 import { featuresRoutes } from './routes/features.js';
 import { pushRoutes } from './routes/push.js';
 import { privacyRoutes } from './routes/privacy.js';
+import { consentRoutes } from './routes/consent.js';
 import { pushService } from './services/push.service.js';
 import { monitoringRoutes } from './routes/monitoring.js';
 import type { AppConfig } from './config/index.js';
@@ -142,6 +143,7 @@ export function createApp(config: AppConfig): express.Application {
 
   // Privacy / GDPR routes
   app.use('/api/privacy', privacyRoutes(config));
+  app.use('/api/consent', consentRoutes(config));
 
   // Push notification routes
   if (process.env['VAPID_PUBLIC_KEY'] && process.env['VAPID_PRIVATE_KEY']) {
