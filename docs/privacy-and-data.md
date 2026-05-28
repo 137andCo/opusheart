@@ -72,15 +72,22 @@ There is no automatic purge of inactive members, old messages, or resolved care
 notes — define and apply a retention schedule appropriate to your community and
 jurisdiction.
 
+## Multi-factor authentication
+
+TOTP-based MFA (RFC 6238) is available and works with any authenticator app
+(Google Authenticator, Authy, 1Password, etc.). Enroll via
+`POST /api/auth/mfa/enroll` (returns an `otpauth://` URL to scan), confirm with
+`POST /api/auth/mfa/confirm`, and disable with `POST /api/auth/mfa/disable`
+(requires a valid code). The TOTP secret is encrypted at rest. Recommended for
+admin and pastor accounts.
+
 ## Known limitations / roadmap
 
 - **Crypto-shredding** (per-instance keys so erasure can destroy a key and render
   data irrecoverable) is a design goal, not yet implemented — erasure currently
   removes/anonymizes records directly.
-- **A formal consent-record API** (timestamped consent history) is planned;
-  today consent is captured as current-state flags on the member.
-- **MFA** is modeled but TOTP verification is not yet implemented; login with
-  `mfaEnabled` is rejected rather than bypassed.
+- **Outbound federation fan-out** is not implemented; inbound peer messages are
+  signature-verified. Keep `FEATURE_CONNECT` off unless testing.
 
 If you operate in the EU/UK, treat church membership and care/health notes as
 special-category data and ensure you have a lawful basis and explicit consent
