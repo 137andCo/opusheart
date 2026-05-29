@@ -1,11 +1,13 @@
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 import * as OTPAuth from 'otpauth';
 import { sha256, decrypt } from '@opusheart/shared';
 import { blindIndex } from '../utils/blindIndex.js';
 import { User, type IUserDocument } from '../models/User.js';
 import { RefreshToken } from '../models/RefreshToken.js';
+import { PasswordResetToken } from '../models/PasswordResetToken.js';
+import { emailService } from './email.service.js';
 import type { AppConfig } from '../config/index.js';
 import { AppError } from '../utils/errors.js';
 
@@ -279,6 +281,54 @@ export class AuthService {
     user.passwordHash = await argon2.hash(newPassword, ARGON2_OPTS);
     user.tokenInvalidatedAt = new Date();
     await user.save();
+    await RefreshToken.updateMany({ userId: user._id }, { invalidated: true });
+  }
+
+  /**
+   * Begin a password reset. ALWAYS resolves the same way regardless of whether
+   * the email exists (no account enumeration). If it does exist, mint a random
+   * token (only its hash is stored) and email the reset link.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await User.findOne({ emailHash: blindIndex(email) });
+    if (!user || !user.active) return; // silent — don't reveal existence
+
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await PasswordResetToken.create({ userId: user._id, tokenHash: sha256(token), expiresAt });
+
+    const base = this.config.instance.url.replace(/\/$/, '');
+    const link = `${base}/reset-password?token=${token}`;
+    await emailService.send({
+      to: email,
+      subject: `Reset your ${this.config.instance.name} password`,
+      html: `<p>We received a request to reset your password. This link expires in 1 hour:</p>`
+        + `<p><a href="${link}">Reset your password</a></p>`
+        + `<p>If you didn't request this, you can ignore this email.</p>`,
+      text: `Reset your password (expires in 1 hour): ${link}`,
+    }).catch(() => { /* email delivery failures must not leak which addresses exist */ });
+  }
+
+  /**
+   * Complete a password reset: verify the (unused, unexpired) token, set the new
+   * password, invalidate the token and all sessions.
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const record = await PasswordResetToken.findOne({ tokenHash: sha256(token) });
+    if (!record || record.usedAt || record.expiresAt < new Date()) {
+      throw new AppError('Invalid or expired reset token', 400, 'INVALID_RESET_TOKEN');
+    }
+    const user = await User.findById(record.userId);
+    if (!user) throw new AppError('Invalid or expired reset token', 400, 'INVALID_RESET_TOKEN');
+
+    user.passwordHash = await argon2.hash(newPassword, ARGON2_OPTS);
+    user.tokenInvalidatedAt = new Date();
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = undefined;
+    await user.save();
+
+    record.usedAt = new Date();
+    await record.save();
     await RefreshToken.updateMany({ userId: user._id }, { invalidated: true });
   }
 

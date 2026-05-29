@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createUserSchema, loginSchema, updateUserSchema, mfaCodeSchema } from '@opusheart/shared';
+import { createUserSchema, loginSchema, updateUserSchema, mfaCodeSchema, changePasswordSchema, requestPasswordResetSchema, resetPasswordSchema } from '@opusheart/shared';
 import { validate } from '../middleware/validate.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { AuthService, AppError } from '../services/auth.service.js';
@@ -160,6 +160,45 @@ export function authRoutes(config: AppConfig): Router {
     try {
       await authService.disableMfa(req.user!.id, req.body.code);
       res.json({ message: 'MFA disabled' });
+    } catch (err) {
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({ error: { message: err.message, code: err.code } });
+      } else {
+        res.status(500).json({ error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } });
+      }
+    }
+  });
+
+  // POST /api/auth/change-password — authenticated self-service change
+  router.post('/change-password', authenticate(config), validate(changePasswordSchema), async (req, res) => {
+    try {
+      await authService.changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
+      res.clearCookie('refreshToken', { path: '/api/auth' });
+      res.json({ message: 'Password changed. Please sign in again.' });
+    } catch (err) {
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({ error: { message: err.message, code: err.code } });
+      } else {
+        res.status(500).json({ error: { message: 'Internal server error', code: 'INTERNAL_ERROR' } });
+      }
+    }
+  });
+
+  // POST /api/auth/forgot-password — email a reset link (always 200, no enumeration)
+  router.post('/forgot-password', validate(requestPasswordResetSchema), async (req, res) => {
+    try {
+      await authService.requestPasswordReset(req.body.email);
+    } catch {
+      // swallow — the response must not vary by whether the email exists
+    }
+    res.json({ message: 'If that email is registered, a reset link has been sent.' });
+  });
+
+  // POST /api/auth/reset-password — complete a reset with the emailed token
+  router.post('/reset-password', validate(resetPasswordSchema), async (req, res) => {
+    try {
+      await authService.resetPassword(req.body.token, req.body.newPassword);
+      res.json({ message: 'Password reset. Please sign in.' });
     } catch (err) {
       if (err instanceof AppError) {
         res.status(err.statusCode).json({ error: { message: err.message, code: err.code } });

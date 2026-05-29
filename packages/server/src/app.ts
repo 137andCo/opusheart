@@ -32,6 +32,7 @@ import { pushRoutes } from './routes/push.js';
 import { privacyRoutes } from './routes/privacy.js';
 import { consentRoutes } from './routes/consent.js';
 import { pushService } from './services/push.service.js';
+import { emailService } from './services/email.service.js';
 import { monitoringRoutes } from './routes/monitoring.js';
 import type { AppConfig } from './config/index.js';
 
@@ -150,6 +151,19 @@ export function createApp(config: AppConfig): express.Application {
   // Privacy / GDPR routes
   app.use('/api/privacy', privacyRoutes(config));
   app.use('/api/consent', consentRoutes(config));
+
+  // Email transport — configured from SMTP env if present (otherwise sends are
+  // skipped with a warning, so the app still boots without mail configured).
+  if (process.env['SMTP_HOST']) {
+    emailService.configure({
+      host: process.env['SMTP_HOST'],
+      port: parseInt(process.env['SMTP_PORT'] || '587', 10),
+      secure: process.env['SMTP_SECURE'] === 'true' || process.env['SMTP_PORT'] === '465',
+      user: process.env['SMTP_USER'] || '',
+      pass: process.env['SMTP_PASS'] || '',
+      from: process.env['SMTP_FROM'] || `noreply@${config.instance.url.replace(/^https?:\/\//, '')}`,
+    });
+  }
 
   // Push notification routes
   if (process.env['VAPID_PUBLIC_KEY'] && process.env['VAPID_PRIVATE_KEY']) {

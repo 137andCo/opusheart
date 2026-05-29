@@ -10,6 +10,7 @@ import { connectDatabase } from './config/database.js';
 import { createRedisClient } from './config/redis.js';
 import { createApp } from './app.js';
 import { flushAuditLog } from './services/audit.service.js';
+import { startScheduler, stopScheduler } from './services/scheduler.js';
 import { aiManager } from '@opusheart/ai';
 import pino from 'pino';
 
@@ -48,9 +49,13 @@ async function bootstrap(): Promise<void> {
     logger.info('Instance: %s — Vertical: %s', config.instance.name, config.vertical);
   });
 
+  // Dispatch scheduled messages whose time has come (Redis-locked across replicas).
+  startScheduler();
+
   // Graceful shutdown — flush any buffered audit entries before exit
   const shutdown = async (signal: string): Promise<void> => {
     logger.info('%s received — flushing audit log and shutting down', signal);
+    stopScheduler();
     await flushAuditLog();
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 10000).unref();

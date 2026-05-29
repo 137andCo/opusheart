@@ -55,12 +55,23 @@ export const mfaCodeSchema = z.object({
   code: z.string().regex(/^\d{6}$/, 'MFA code must be 6 digits'),
 });
 
+const strongPassword = z.string().min(10).max(128)
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number');
+
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(10).max(128)
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
+  newPassword: strongPassword,
+});
+
+export const requestPasswordResetSchema = z.object({
+  email: z.string().email(),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(20).max(200),
+  newPassword: strongPassword,
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
