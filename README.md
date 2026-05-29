@@ -42,6 +42,7 @@ Monorepo with pnpm workspaces:
 - `packages/dashboard` -- Nuxt 4 SPA (admin)
 - `packages/web` -- Nuxt 4 SSR (public site)
 - `packages/ai` -- AI provider adapters (optional, bring your own key)
+- `packages/builder`, `packages/connect`, `verticals/church` -- scaffold packages reserved for future extraction (page builder, federation client, vertical presets); currently version stubs
 
 ## Features
 
@@ -49,14 +50,14 @@ Monorepo with pnpm workspaces:
 - **Member Management** — Households, care notes, attendance tracking
 - **Events** — RSVP, volunteer slots, bookable resources
 - **Groups** — Membership, materials, real-time chat
-- **Communication** — Email and push notifications
+- **Communication** — Email and web-push notifications, scheduled sends (SMS planned, bring-your-own-provider)
 - **Prayer Wall** — Community prayer requests with moderation
 - **Sermons** — Archive with podcast RSS feed
 - **Resource Hub** — Public community directory
 - **Giving** — Fund management and donor statements
-- **Connect Federation** — Inter-community collaboration mesh
+- **Connect Federation** — Inter-community collaboration mesh (experimental, off by default)
 - **AI Assistance** — Optional content tools (bring your own API key)
-- **PWA** — Offline support for mobile
+- **PWA** — Installable app; caches public content (resources, events, sermons) for poor connections
 - **GDPR Compliance** — Data export and account deletion
 
 ## AI Features (Optional)

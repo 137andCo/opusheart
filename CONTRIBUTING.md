@@ -40,8 +40,8 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## Testing
 
-- Tests live in each package's `tests/` directory; the server suite is integration-style (real HTTP via supertest)
-- Tests run against a **real MongoDB and Redis** — start them first: `docker compose up -d mongo redis`
+- The unit/integration suites live under `packages/server/tests` and `packages/shared`; the server suite is integration-style (real HTTP via supertest). The dashboard has Playwright e2e tests under `packages/dashboard/e2e`.
+- Server tests run against a **real MongoDB** — start one first (e.g. `docker compose up -d mongo`) and point the suite at it with `TEST_MONGO_URL`
 - No mocks: tests exercise real code paths against real services
 - Run all tests: `pnpm test`
 

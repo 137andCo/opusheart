@@ -14,8 +14,6 @@ Full member directory with search, status filtering, and detailed profiles. Trac
 
 ![Members List](screenshots/02-members-list.png)
 
-![Member Detail](screenshots/03-member-detail.png)
-
 ## Events
 
 Create and manage events with recurring schedules, volunteer slot coordination, RSVP tracking, and visibility controls (public, members-only, leaders-only). Supports registration caps and resource bookings.
@@ -36,7 +34,7 @@ Manage your sermon library with series organization, scripture references, speak
 
 ## Communication
 
-Send messages to your community via email, push notifications, SMS, or in-app announcements. Target specific audiences by group, role, or custom member lists. Schedule messages for future delivery.
+Send messages to your community via email, web-push notifications, or in-app announcements. Target specific audiences by group, role, or custom member lists. Schedule messages for future delivery. *(SMS is planned as a bring-your-own-provider feature and is not yet wired.)*
 
 ![Communication](screenshots/07-communication.png)
 
@@ -91,6 +89,6 @@ Customize your instance with theme colors, fonts, logos, and custom CSS. Admin-o
 - **Feature toggles** — Enable only what your community needs
 - **Federation-ready** — Connect with other OpusHeart instances via the Connect protocol
 - **AI-powered** — Optional AI summaries for sermons and resources
-- **PWA-ready** — Push notifications and offline support
+- **PWA-ready** — Installable app with web-push notifications; public content (resources, events, sermons) is cached for poor connections
 - **Multi-language** — i18n-ready with locale support on pages and user profiles
 - **Docker-native** — Production-ready Dockerfiles and Swarm stack included

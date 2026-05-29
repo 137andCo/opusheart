@@ -15,7 +15,7 @@ Features can be enabled/disabled via environment variables or the admin dashboar
 | Member Care | `FEATURE_MEMBER_CARE` | off |
 | AI Assist | `ENABLE_AI` | off |
 | Federation | `FEATURE_CONNECT` | off |
-| SMS | `FEATURE_SMS` | off |
+| SMS *(planned — no delivery provider wired yet)* | `FEATURE_SMS` | off |
 
 ## User Roles
 
@@ -99,6 +99,6 @@ When enabled, OpusHeart instances can share resources and events:
 ## Data Privacy (GDPR)
 
 - Members can export their data via **Settings > Privacy > Export My Data**
-- Members can request account deletion (soft delete with 30-day grace period)
-- PII is encrypted at rest using the `ENCRYPTION_KEY`
+- Members can request account deletion. Erasure is **immediate and irreversible**: personal data is deleted, while donations and any federated prayers are anonymized (donor link severed) to satisfy tax/charitable retention law. See [privacy-and-data.md](privacy-and-data.md).
+- PII is encrypted at rest (AES-256-GCM) using the `ENCRYPTION_KEY`; lookup indexes use a keyed HMAC derived from the same key, not a plain hash
 - Audit log tracks data access and modifications
