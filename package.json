@@ -30,7 +30,8 @@
       "brace-expansion@<2.0.3": ">=2.0.3",
       "path-to-regexp@<8.4.0": ">=8.4.0",
       "serialize-javascript@<7.0.3": ">=7.0.3",
-      "defu@<6.1.5": ">=6.1.5"
+      "defu@<6.1.5": ">=6.1.5",
+      "qs@<6.15.2": ">=6.15.2"
     }
   },
   "devDependencies": {

@@ -5,7 +5,17 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import express from 'express';
 import { createApp } from '../../src/app.js';
-import { createRateLimiter } from '../../src/middleware/rateLimiter.js';
+import { rateLimit, type RateLimitStore } from '../../src/middleware/rateLimit.js';
+
+// In-memory stand-in for Redis so the limiter can be unit-tested without a
+// live Redis (production uses the shared ioredis client).
+function fakeStore(): RateLimitStore {
+  const counts = new Map<string, number>();
+  return {
+    async incr(key: string) { const v = (counts.get(key) ?? 0) + 1; counts.set(key, v); return v; },
+    async expire() { return 1; },
+  };
+}
 import { User } from '../../src/models/User.js';
 import { MemberCareNote } from '../../src/models/MemberCareNote.js';
 import { Member } from '../../src/models/Member.js';
@@ -185,7 +195,7 @@ describe('Security Tests', () => {
     it('should return 429 after exceeding rate limit', async () => {
       // Create a minimal Express app with tight rate limiter for testing
       const rateLimitedApp = express();
-      const limiter = createRateLimiter(60000, 3); // 3 req per minute
+      const limiter = rateLimit({ windowMs: 60000, maxRequests: 3, keyPrefix: 'test', store: fakeStore() });
       rateLimitedApp.use(limiter);
       rateLimitedApp.get('/test', (_req, res) => {
         res.json({ ok: true });
@@ -203,9 +213,9 @@ describe('Security Tests', () => {
       expect(res.body.error.code).toBe('RATE_LIMITED');
     });
 
-    it('should include standard rate limit headers', async () => {
+    it('should include rate limit headers', async () => {
       const rateLimitedApp = express();
-      const limiter = createRateLimiter(60000, 10);
+      const limiter = rateLimit({ windowMs: 60000, maxRequests: 10, keyPrefix: 'test', store: fakeStore() });
       rateLimitedApp.use(limiter);
       rateLimitedApp.get('/test', (_req, res) => {
         res.json({ ok: true });
@@ -213,8 +223,23 @@ describe('Security Tests', () => {
 
       const res = await request(rateLimitedApp).get('/test');
       expect(res.status).toBe(200);
-      expect(res.headers['ratelimit-limit']).toBeDefined();
-      expect(res.headers['ratelimit-remaining']).toBeDefined();
+      expect(res.headers['x-ratelimit-limit']).toBeDefined();
+      expect(res.headers['x-ratelimit-remaining']).toBeDefined();
+    });
+
+    it('fails CLOSED (503) when the limiter store is unavailable', async () => {
+      const rateLimitedApp = express();
+      const brokenStore: RateLimitStore = {
+        async incr() { throw new Error('redis down'); },
+        async expire() { return 1; },
+      };
+      const limiter = rateLimit({ windowMs: 60000, maxRequests: 10, keyPrefix: 'test', store: brokenStore });
+      rateLimitedApp.use(limiter);
+      rateLimitedApp.get('/test', (_req, res) => { res.json({ ok: true }); });
+
+      const res = await request(rateLimitedApp).get('/test');
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe('RATE_LIMITER_DOWN');
     });
   });
 

@@ -6,7 +6,7 @@ import pinoHttp from 'pino-http';
 import pino from 'pino';
 import { randomUUID } from 'node:crypto';
 import { requestContextMiddleware, getRequestContext } from './middleware/requestContext.js';
-import { authLimiter, apiLimiter } from './middleware/rateLimiter.js';
+import { authLimiter, apiLimiter } from './middleware/rateLimit.js';
 import { validateObjectId } from './middleware/validateObjectId.js';
 import { sanitizeMongo } from './middleware/sanitizeMongo.js';
 import { authRoutes } from './routes/auth.js';
