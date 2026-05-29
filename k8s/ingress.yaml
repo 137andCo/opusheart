@@ -1,0 +1,52 @@
+# Ingress for an nginx-ingress controller with cert-manager for TLS.
+# Replace yourdomain.org / admin.yourdomain.org and the cluster-issuer name.
+# TLS terminates here, so the server's TRUST_PROXY=1 (configmap) gives accurate
+# client IPs for rate limiting and audit logs.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opusheart
+  namespace: opusheart
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - yourdomain.org
+        - admin.yourdomain.org
+      secretName: opusheart-tls
+  rules:
+    # Public site + API on the apex/primary host.
+    - host: yourdomain.org
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: server
+                port: { number: 3020 }
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service:
+                name: server
+                port: { number: 3020 }
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port: { number: 3022 }
+    # Admin dashboard on its own host (no path-rewrite needed).
+    - host: admin.yourdomain.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dashboard
+                port: { number: 3021 }

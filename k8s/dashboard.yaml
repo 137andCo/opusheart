@@ -1,0 +1,52 @@
+# Replace `opusheart-dashboard:0.1.0` with your pushed image (pin a version/digest).
+# Built on nginxinc/nginx-unprivileged — already runs as non-root (uid 101) on :3021.
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard
+  namespace: opusheart
+spec:
+  selector:
+    app: dashboard
+  ports:
+    - port: 3021
+      targetPort: 3021
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: opusheart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101           # nginx user in nginx-unprivileged
+      containers:
+        - name: dashboard
+          image: opusheart-dashboard:0.1.0
+          ports:
+            - containerPort: 3021
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: { cpu: "25m", memory: "24Mi" }
+            limits: { cpu: "250m", memory: "96Mi" }
+          livenessProbe:
+            httpGet: { path: /, port: 3021 }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /, port: 3021 }
+            initialDelaySeconds: 5
+            periodSeconds: 10

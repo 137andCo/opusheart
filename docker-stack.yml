@@ -1,10 +1,29 @@
+# OpusHeart — Docker Swarm production stack.
+#   docker stack deploy -c docker-stack.yml opusheart
+# Requires: a Swarm (`docker swarm init`), the external secrets created (see
+# docs/self-host-guide.md), REGISTRY/DOMAIN/TAG env set, and a node labelled
+# `storage=true` for the datastores. TLS is terminated by an upstream proxy
+# (Traefik / cloud LB / Cloudflare) in front of the nginx published on :80.
 version: "3.8"
+
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
 
 services:
   server:
-    image: ${REGISTRY}/opusheart-server:${TAG:-latest}
+    image: ${REGISTRY}/opusheart-server:${TAG:?set TAG to a released version or digest}
+    <<: *hardening
+    read_only: true
+    tmpfs:
+      - /tmp
     deploy:
-      replicas: 1
+      replicas: 2
+      resources:
+        limits: { cpus: "1.0", memory: 512M }
+        reservations: { cpus: "0.25", memory: 128M }
       update_config:
         parallelism: 1
         delay: 10s
@@ -19,8 +38,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3020"
+      TRUST_PROXY: "1"
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3020/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3020/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -30,12 +50,20 @@ services:
       - public
 
   web:
-    image: ${REGISTRY}/opusheart-web:${TAG:-latest}
+    image: ${REGISTRY}/opusheart-web:${TAG:?set TAG to a released version or digest}
+    <<: *hardening
+    read_only: true
+    tmpfs:
+      - /tmp
     deploy:
-      replicas: 1
+      replicas: 2
+      resources:
+        limits: { cpus: "0.5", memory: 384M }
+        reservations: { cpus: "0.1", memory: 96M }
       restart_policy:
         condition: on-failure
     environment:
+      NODE_ENV: production
       NITRO_PORT: "3022"
       NITRO_HOST: "0.0.0.0"
       NUXT_PUBLIC_API_BASE: "https://${DOMAIN}/api"
@@ -49,9 +77,13 @@ services:
       - public
 
   dashboard:
-    image: ${REGISTRY}/opusheart-dashboard:${TAG:-latest}
+    image: ${REGISTRY}/opusheart-dashboard:${TAG:?set TAG to a released version or digest}
+    <<: *hardening
     deploy:
       replicas: 1
+      resources:
+        limits: { cpus: "0.25", memory: 96M }
+        reservations: { cpus: "0.05", memory: 24M }
       restart_policy:
         condition: on-failure
     healthcheck:
@@ -64,9 +96,18 @@ services:
       - public
 
   nginx:
-    image: nginx:stable
+    image: nginx:1.27-alpine
+    <<: *hardening
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
     deploy:
       replicas: 1
+      resources:
+        limits: { cpus: "0.5", memory: 64M }
+        reservations: { cpus: "0.05", memory: 16M }
       restart_policy:
         condition: on-failure
     ports:
@@ -85,11 +126,17 @@ services:
 
   mongo:
     image: mongo:8
+    <<: *hardening
     deploy:
       replicas: 1
+      resources:
+        limits: { cpus: "1.0", memory: 1G }
+        reservations: { cpus: "0.25", memory: 256M }
       placement:
         constraints:
           - node.labels.storage == true
+      restart_policy:
+        condition: on-failure
     secrets:
       - mongo_root_username
       - mongo_root_password
@@ -103,14 +150,20 @@ services:
 
   redis:
     image: redis:7-bookworm
+    <<: *hardening
     deploy:
       replicas: 1
+      resources:
+        limits: { cpus: "0.5", memory: 256M }
+        reservations: { cpus: "0.05", memory: 32M }
       placement:
         constraints:
           - node.labels.storage == true
+      restart_policy:
+        condition: on-failure
+    command: sh -c 'redis-server --requirepass "$$(cat /run/secrets/redis_password)"'
     secrets:
       - redis_password
-    command: sh -c 'redis-server --requirepass "$$(cat /run/secrets/redis_password)"'
     volumes:
       - redis-data:/data
     networks:

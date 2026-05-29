@@ -1,0 +1,68 @@
+# Replace `opusheart-web:0.1.0` with your pushed image (pin a version/digest).
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: opusheart
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 3022
+      targetPort: 3022
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: opusheart
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+        - name: web
+          image: opusheart-web:0.1.0
+          ports:
+            - containerPort: 3022
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: NITRO_PORT
+              value: "3022"
+            - name: NITRO_HOST
+              value: "0.0.0.0"
+            - name: NUXT_PUBLIC_API_BASE
+              value: "https://yourdomain.org/api"   # set to your public origin + /api
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: { cpu: "50m", memory: "96Mi" }
+            limits: { cpu: "500m", memory: "384Mi" }
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet: { path: /, port: 3022 }
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /, port: 3022 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: tmp
+          emptyDir: {}

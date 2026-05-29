@@ -1,0 +1,2 @@
+# Never commit the materialized secret — only secret.example.yaml is tracked.
+secret.yaml

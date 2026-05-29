@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opusheart-config
+  namespace: opusheart
+data:
+  NODE_ENV: "production"
+  PORT: "3020"
+  # Behind the Ingress, so trust one proxy hop (real client IP for rate limiting
+  # + audit). Set higher if additional proxies sit in front.
+  TRUST_PROXY: "1"
+  INSTANCE_NAME: "My Church"
+  # Replace these with your public origin before applying.
+  INSTANCE_URL: "https://yourdomain.org"
+  CORS_ORIGINS: "https://yourdomain.org"
+  VERTICAL: "church"
+  FEATURE_CONNECT: "false"
+  ENABLE_AI: "false"
