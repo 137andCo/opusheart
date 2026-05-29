@@ -5,6 +5,45 @@ import { cryptoService } from './crypto.service.js';
 import { AppError } from '../utils/errors.js';
 import type { FederationRequestInput, EmergencyBroadcastInput, PledgeInput } from '@opusheart/shared/schemas/connect.schema.js';
 
+/**
+ * Canonical signing payload for an emergency broadcast. BOTH the signer and the
+ * verifier must serialize identically, so we pin an explicit field set + order
+ * and a normalized expiresAt. Critically this EXCLUDES hopCount (it increments
+ * at every hop, so signing it would break verification downstream) and the
+ * signature itself. Previously sign/verify used different field sets and orders,
+ * so every interop attempt failed verification.
+ */
+function canonicalBroadcastPayload(b: {
+  originInstanceId: string;
+  originInstanceName: string;
+  severity: string;
+  title: string;
+  description: string;
+  needs: Array<{ type: string; description: string; quantity?: number; unit?: string }>;
+  location: unknown;
+  contactMethod: string;
+  expiresAt: Date | string;
+  maxHops: number;
+}): string {
+  return JSON.stringify({
+    originInstanceId: b.originInstanceId,
+    originInstanceName: b.originInstanceName,
+    severity: b.severity,
+    title: b.title,
+    description: b.description,
+    needs: b.needs.map(n => ({ type: n.type, description: n.description, quantity: n.quantity, unit: n.unit })),
+    location: b.location,
+    contactMethod: b.contactMethod,
+    expiresAt: new Date(b.expiresAt).toISOString(),
+    maxHops: b.maxHops,
+  });
+}
+
+// A peer broadcast may declare an expiry at most this far in the future. Without
+// an upper bound, a replayed broadcast with expiresAt set years out would never
+// trip the freshness check.
+const MAX_BROADCAST_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 export class FederationService {
   /**
    * Load this instance's signing keypair from persistent storage into the
@@ -117,12 +156,11 @@ export class FederationService {
     // Ensure we have a persistent key pair for signing
     await this.ensureKeyPair({ instanceName, instanceUrl: instanceId });
 
-    const payload = JSON.stringify({
+    const signature = cryptoService.sign(canonicalBroadcastPayload({
       ...data,
       originInstanceId: instanceId,
       originInstanceName: instanceName,
-    });
-    const signature = cryptoService.sign(payload);
+    }));
 
     const broadcast = await EmergencyBroadcast.create({
       originInstanceId: instanceId,
@@ -171,11 +209,12 @@ export class FederationService {
       throw new AppError('Unknown or untrusted peer', 403, 'UNTRUSTED_PEER');
     }
 
-    const { signature, ...payload } = broadcastData;
+    const { signature } = broadcastData;
     if (!signature || typeof signature !== 'string') {
       throw new AppError('Missing broadcast signature', 400, 'MISSING_SIGNATURE');
     }
-    const valid = cryptoService.verify(JSON.stringify(payload), signature, peer.publicKey);
+    // Verify against the SAME canonical payload the signer used (excludes hopCount).
+    const valid = cryptoService.verify(canonicalBroadcastPayload(broadcastData), signature, peer.publicKey);
     if (!valid) {
       throw new AppError('Invalid broadcast signature', 403, 'INVALID_SIGNATURE');
     }
@@ -184,9 +223,15 @@ export class FederationService {
       throw new AppError('Broadcast exceeded max hops', 400, 'MAX_HOPS_EXCEEDED');
     }
 
-    // Freshness: reject broadcasts that have already expired (stale replay).
-    if (new Date(broadcastData.expiresAt).getTime() <= Date.now()) {
+    // Freshness: reject broadcasts that have already expired (stale replay)...
+    const expiresAtMs = new Date(broadcastData.expiresAt).getTime();
+    if (expiresAtMs <= Date.now()) {
       throw new AppError('Broadcast already expired', 400, 'BROADCAST_EXPIRED');
+    }
+    // ...and reject an implausibly far-future expiry, which would otherwise let a
+    // replayed broadcast dodge the freshness check indefinitely.
+    if (expiresAtMs - Date.now() > MAX_BROADCAST_TTL_MS) {
+      throw new AppError('Broadcast expiry too far in the future', 400, 'BROADCAST_TTL_TOO_LONG');
     }
 
     try {
@@ -276,13 +321,36 @@ export class FederationService {
 
 export const federationService = new FederationService();
 
+/** True if an IP literal (v4 or v6) is in a private/loopback/link-local/metadata range. */
+export function isPrivateIp(ip: string): boolean {
+  const addr = ip.toLowerCase();
+  // IPv4-mapped IPv6 (::ffff:127.0.0.1 or ::ffff:7f00:1) — unwrap to the v4 tail.
+  const mapped = addr.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  const v4 = mapped ? mapped[1]! : addr;
+  const v4Patterns = [
+    /^127\./, /^10\./, /^192\.168\./, /^169\.254\./,
+    /^172\.(1[6-9]|2\d|3[01])\./,
+    /^0\./, /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // CGNAT 100.64/10
+  ];
+  if (v4Patterns.some(re => re.test(v4))) return true;
+  // IPv6 loopback / unique-local (fc00::/7 -> fc,fd) / link-local (fe80::/10)
+  if (addr === '::1' || addr === '::') return true;
+  if (/^f[cd][0-9a-f]{2}:/i.test(addr)) return true;
+  if (/^fe[89ab][0-9a-f]:/i.test(addr)) return true;
+  if (addr.includes('::ffff:') && v4Patterns.some(re => re.test(v4))) return true;
+  return false;
+}
+
 /**
  * SSRF guard for outbound federation requests. Peer URLs are user-supplied, so
- * before this instance ever fetch()es one, reject non-HTTPS schemes and any host
- * that resolves to a private/loopback/link-local range. Used by the (future)
- * outbound peer fan-out; exported now so it isn't forgotten when that lands.
+ * before this instance ever fetch()es one we: require HTTPS; reject localhost /
+ * .local / mapped-IPv6 / decimal / hex / octal IP literal forms outright; then
+ * RESOLVE the hostname via DNS and reject if ANY resolved address is private.
+ * (DNS resolution closes the rebinding + alternate-encoding bypasses a literal
+ * pattern match alone would miss.) Async because it does a real lookup; the
+ * future outbound fan-out must await this before every peer fetch().
  */
-export function isSafePeerUrl(rawUrl: string): boolean {
+export async function isSafePeerUrl(rawUrl: string): Promise<boolean> {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -291,17 +359,25 @@ export function isSafePeerUrl(rawUrl: string): boolean {
   }
   if (url.protocol !== 'https:') return false;
 
-  // URL.hostname wraps IPv6 literals in brackets (e.g. "[::1]") — strip them so
-  // the loopback/link-local patterns below match.
+  // URL.hostname wraps IPv6 literals in brackets (e.g. "[::1]") — strip them.
   const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (!host) return false;
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return false;
+  // Reject non-DNS integer/hex/octal/mapped encodings of IPs before any lookup.
+  if (host.includes('::ffff:')) return false;
+  if (/^0x/i.test(host)) return false;          // hex IP (0x7f000001)
+  if (/^\d+$/.test(host)) return false;          // decimal IP (2130706433)
+  if (/^0\d/.test(host)) return false;           // octal-ish first octet (0177.x)
 
-  // Block obvious private/loopback/link-local IP literals and the cloud metadata IP.
-  const privatePatterns = [
-    /^127\./, /^10\./, /^192\.168\./, /^169\.254\./,
-    /^172\.(1[6-9]|2\d|3[01])\./,
-    /^0\./, /^::1$/, /^fc00:/i, /^fe80:/i,
-    /^169\.254\.169\.254$/,
-  ];
-  return !privatePatterns.some(re => re.test(host));
+  // If it's already an IP literal, check it directly; otherwise resolve via DNS.
+  if (isPrivateIp(host)) return false;
+
+  try {
+    const { lookup } = await import('node:dns/promises');
+    const results = await lookup(host, { all: true });
+    if (!results.length) return false;
+    return !results.some(r => isPrivateIp(r.address));
+  } catch {
+    return false; // unresolvable host — refuse
+  }
 }

@@ -12,7 +12,11 @@ import type { AppConfig } from '../config/index.js';
 export function federationRoutes(config: AppConfig): Router {
   const router = Router();
 
-  // ─── Public peer-to-peer endpoints (no auth, no feature gate) ───
+  // ─── Public peer-to-peer endpoints (no auth, but feature-gated) ───
+  // These are intentionally unauthenticated (peers prove identity via Ed25519
+  // signatures, not a session), but they must only exist when federation is
+  // enabled — otherwise an instance with Connect OFF still exposes a probe +
+  // DB-read surface on 100% of deployments.
 
   const emergencyReceiveSchema = z.object({
     originInstanceId: z.string().min(1).max(500),
@@ -51,7 +55,7 @@ export function federationRoutes(config: AppConfig): Router {
   // inbound endpoints (e.g. /emergency/receive) do real signature checks.
 
   // Receive emergency broadcast from a peer
-  router.post('/emergency/receive', validate(emergencyReceiveSchema, 'body'), async (req, res) => {
+  router.post('/emergency/receive', featureGate('connect', config), validate(emergencyReceiveSchema, 'body'), async (req, res) => {
     try {
       const broadcast = await federationService.receiveEmergency(req.body);
       res.status(201).json({ broadcast: broadcast.toJSON() });

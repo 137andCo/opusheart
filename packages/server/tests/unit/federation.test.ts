@@ -6,7 +6,8 @@ import { connectTestDb, cleanTestDb, disconnectTestDb } from '../setup.js';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { createApp } from '../../src/app.js';
-import { CryptoService } from '../../src/services/crypto.service.js';
+import { CryptoService, cryptoService } from '../../src/services/crypto.service.js';
+import { federationService } from '../../src/services/federation.service.js';
 import { FederationPeer } from '../../src/models/FederationPeer.js';
 import { EmergencyBroadcast } from '../../src/models/EmergencyBroadcast.js';
 import { User } from '../../src/models/User.js';
@@ -429,15 +430,16 @@ describe('Feature Gate (connect disabled)', () => {
       .expect(404);
   });
 
-  it('public peer endpoints bypass the feature gate (validation, not 404)', async () => {
-    // /emergency/receive is a public peer endpoint placed before the feature
-    // gate. With an empty body it must fail VALIDATION (400), proving it is
-    // reachable — not blocked by the disabled-feature 404.
+  it('public /emergency/receive is feature-gated (404 when connect disabled)', async () => {
+    // The endpoint is unauthenticated (peers prove identity by signature), but it
+    // must NOT exist when Connect is off — otherwise every deployment exposes a
+    // probe + DB-read surface. An empty body would 400 if it were reachable; the
+    // gate returns 404 first.
     const res = await request(disabledApp)
       .post('/api/federation/emergency/receive')
       .send({});
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
   });
 });
 
@@ -474,5 +476,66 @@ describe('Authentication', () => {
     await request(app)
       .get('/api/federation/config')
       .expect(401);
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+// Sign / verify interop (canonical payload) — regression for the
+// dormant bug where sign and verify used different field sets/order.
+// ────────────────────────────────────────────────────────────
+
+describe('Emergency broadcast sign/verify interop', () => {
+  it('a broadcast this instance signs verifies when received back from a trusted peer', async () => {
+    const instanceId = 'http://localhost:3020';
+    const instanceName = 'TestChurch';
+    // Shared, byte-identical fields so the canonical payload matches on both sides.
+    const expiresAt = new Date(Date.now() + 3_600_000);
+    const needs = [{ type: 'water', description: 'bottled water', quantity: 100, unit: 'cases' }];
+    const location = { city: 'Springfield', state: 'IL', country: 'US' };
+
+    const bc = await federationService.broadcastEmergency(
+      { severity: 'urgent', title: 'Flood', description: 'Need help', needs, location,
+        contactMethod: 'help@example.org', expiresAt, maxHops: 5 } as never,
+      instanceId, instanceName,
+    );
+
+    // Register the origin as a trusted peer using THIS instance's public key.
+    await FederationPeer.create({
+      instanceUrl: instanceId, instanceName, publicKey: cryptoService.getPublicKey(),
+      trustLevel: 'trusted', active: true, connectedAt: new Date(), lastSeenAt: new Date(),
+    });
+
+    const received = await federationService.receiveEmergency({
+      originInstanceId: instanceId, originInstanceName: instanceName,
+      severity: 'urgent', title: 'Flood', description: 'Need help', needs, location,
+      contactMethod: 'help@example.org', expiresAt, hopCount: 0, maxHops: 5,
+      signature: bc.signature,
+    });
+
+    expect(received).toBeDefined();
+    expect(received.hopCount).toBe(1); // accepted (signature verified) and hop incremented
+  });
+
+  it('rejects a far-future expiresAt that would dodge the freshness check', async () => {
+    const instanceId = 'http://peer.example.org';
+    await FederationPeer.create({
+      instanceUrl: instanceId, instanceName: 'Peer', publicKey: cryptoService.getPublicKey(),
+      trustLevel: 'trusted', active: true, connectedAt: new Date(), lastSeenAt: new Date(),
+    });
+    const expiresAt = new Date(Date.now() + 365 * 24 * 3600_000); // ~1 year out
+    const needs = [{ type: 'food', description: 'meals' }];
+    const location = { city: 'X', state: 'Y', country: 'US' };
+    // Sign a valid payload so we reach the TTL check rather than failing signature.
+    const signature = cryptoService.sign(JSON.stringify({
+      originInstanceId: instanceId, originInstanceName: 'Peer', severity: 'need',
+      title: 'T', description: 'D', needs: needs.map(n => ({ type: n.type, description: n.description, quantity: undefined, unit: undefined })),
+      location, contactMethod: 'c@example.org', expiresAt: expiresAt.toISOString(), maxHops: 5,
+    }));
+
+    await expect(federationService.receiveEmergency({
+      originInstanceId: instanceId, originInstanceName: 'Peer', severity: 'need',
+      title: 'T', description: 'D', needs, location, contactMethod: 'c@example.org',
+      expiresAt, hopCount: 0, maxHops: 5, signature,
+    })).rejects.toMatchObject({ code: 'BROADCAST_TTL_TOO_LONG' });
   });
 });
