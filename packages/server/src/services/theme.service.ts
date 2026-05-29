@@ -8,23 +8,31 @@ const DEFAULT_THEME: Record<string, unknown> = {
 };
 
 /**
- * Strip dangerous CSS constructs that could enable XSS or data exfiltration.
- * Allows normal styling but blocks expressions, JS URLs, external imports, etc.
+ * Sanitize admin-authored custom CSS.
+ *
+ * RENDERING CONTRACT: the returned string is only ever safe to inject into a
+ * dedicated, scoped `<style>` element — it must NEVER be reflected into an HTML
+ * attribute or element body, where it would no longer be CSS.
+ *
+ * A blocklist regex can't fully parse CSS, so instead of trying to allow some
+ * url()/scheme combinations we remove the dangerous primitives WHOLESALE:
+ *  - every url(...) value -> url() — kills external resource loads entirely
+ *    (data:/javascript: payloads, plus selector-based exfiltration and
+ *    third-party font/image tracking),
+ *  - @import (external stylesheet load / exfil),
+ *  - expression()/behavior/-moz-binding (legacy script-in-CSS),
+ *  - </style> and HTML comment markers (style-context breakout).
+ * Legitimate @media / @keyframes / @font-face rules survive; only their url()s
+ * are neutralized.
  */
 function sanitizeCss(css: string): string {
-  // Remove null bytes
   let sanitized = css.replace(/\0/g, '');
-  // Strip CSS expressions (IE) and similar eval constructs
-  sanitized = sanitized.replace(/expression\s*\(/gi, '/* blocked */');
-  // Strip behavior/binding properties (IE/Firefox XBL)
-  sanitized = sanitized.replace(/behavior\s*:/gi, '/* blocked */');
-  sanitized = sanitized.replace(/-moz-binding\s*:/gi, '/* blocked */');
-  // Strip @import (prevents loading external stylesheets / data exfil)
+  // Neutralize EVERY url(...) — no external or inline resource loading at all.
+  sanitized = sanitized.replace(/url\s*\([^)]*\)?/gi, 'url()');
   sanitized = sanitized.replace(/@import\b/gi, '/* blocked */');
-  // Strip url() containing javascript: or data: with scripts
-  sanitized = sanitized.replace(/url\s*\(\s*['"]?\s*javascript\s*:/gi, 'url(/* blocked */');
-  sanitized = sanitized.replace(/url\s*\(\s*['"]?\s*data\s*:\s*text\/html/gi, 'url(/* blocked */');
-  // Strip HTML comment sequences that could break out of style context
+  sanitized = sanitized.replace(/expression\s*\(/gi, '/* blocked */(');
+  sanitized = sanitized.replace(/behavior\s*:/gi, '/* blocked */:');
+  sanitized = sanitized.replace(/-moz-binding\s*:/gi, '/* blocked */:');
   sanitized = sanitized.replace(/<\/?style\b[^>]*>/gi, '/* blocked */');
   sanitized = sanitized.replace(/<!--/g, '/* blocked */');
   sanitized = sanitized.replace(/-->/g, '/* blocked */');

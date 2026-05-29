@@ -47,19 +47,31 @@ export function sanitizeHtml(html: string): string {
 }
 
 /**
- * Sanitize page-builder content blocks in place (each block may carry a `text`
- * or `html` string field).
+ * Sanitize one page-builder block, recursing into its nested `content` children.
+ * The block schema is tiptap-style — a `text`/`html` payload can sit several
+ * levels deep (e.g. bulletList > listItem > paragraph > text), so a top-level-
+ * only pass would leave nested user text unsanitized.
+ */
+function sanitizeBlock(block: any): any {
+  if (!block || typeof block !== 'object') return block;
+  const sanitized = { ...block };
+  if (typeof sanitized.text === 'string') {
+    sanitized.text = sanitizeHtml(sanitized.text);
+  }
+  if (typeof sanitized.html === 'string') {
+    sanitized.html = sanitizeHtml(sanitized.html);
+  }
+  if (Array.isArray(sanitized.content)) {
+    sanitized.content = sanitized.content.map(sanitizeBlock);
+  }
+  return sanitized;
+}
+
+/**
+ * Sanitize page-builder content blocks, descending into nested content so every
+ * user-authored text/html node at any depth is cleaned.
  */
 export function sanitizePageContent(content: unknown[]): unknown[] {
   if (!Array.isArray(content)) return [];
-  return content.map((block: any) => {
-    const sanitized = { ...block };
-    if (typeof sanitized.text === 'string') {
-      sanitized.text = sanitizeHtml(sanitized.text);
-    }
-    if (typeof sanitized.html === 'string') {
-      sanitized.html = sanitizeHtml(sanitized.html);
-    }
-    return sanitized;
-  });
+  return content.map(sanitizeBlock);
 }

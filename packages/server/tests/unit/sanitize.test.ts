@@ -48,4 +48,46 @@ describe('sanitizeHtml', () => {
     expect(json).not.toContain('<script>');
     expect(json).toContain('<em>');
   });
+
+  it('sanitizes DEEPLY NESTED block content, not just top-level', () => {
+    const blocks = sanitizePageContent([
+      {
+        type: 'bulletList',
+        content: [
+          {
+            type: 'listItem',
+            content: [
+              { type: 'paragraph', content: [{ type: 'text', html: '<img src=x onerror=alert(1)><em>ok</em>' }] },
+            ],
+          },
+        ],
+      },
+    ]);
+    const json = JSON.stringify(blocks);
+    expect(json).not.toContain('onerror');
+    expect(json).toContain('<em>');
+  });
+});
+
+describe('sanitizeMongo (prototype pollution)', () => {
+  // Re-import the scrubber indirectly: it mutates in place via the middleware.
+  it('strips __proto__/constructor/prototype and $-/dotted keys from the body', async () => {
+    const { sanitizeMongo } = await import('../../src/middleware/sanitizeMongo.js');
+    const body: Record<string, unknown> = JSON.parse(
+      '{"name":"ok","__proto__":{"admin":true},"constructor":{"x":1},"$where":"1","a.b":2,"nested":{"$gt":""}}',
+    );
+    const req = { body, params: {}, query: {} } as any;
+    sanitizeMongo(req, {} as any, () => {});
+
+    expect(req.body.name).toBe('ok');
+    expect(Object.prototype.hasOwnProperty.call(req.body, '__proto__')).toBe(false);
+    // own `constructor` key removed (the property still resolves up the prototype
+    // chain to Object.prototype.constructor — that's expected and harmless).
+    expect(Object.prototype.hasOwnProperty.call(req.body, 'constructor')).toBe(false);
+    expect(req.body.$where).toBeUndefined();
+    expect(req.body['a.b']).toBeUndefined();
+    expect(req.body.nested).toEqual({});
+    // global prototype not polluted
+    expect(({} as any).admin).toBeUndefined();
+  });
 });
