@@ -28,7 +28,7 @@ export class PrivacyService {
 
     const [
       user, donations, prayers, prayerResponses, careNotes,
-      groups, bookings, messages, events,
+      groups, bookings, messages, events, resourceSubmissions,
     ] = await Promise.all([
       User.findById(userId).select('-passwordHash -mfaSecret -pushSubscription'),
       Donation.find({ memberId: userId }).limit(5000),
@@ -39,6 +39,9 @@ export class PrivacyService {
       Booking.find({ bookedBy: userId }).limit(1000),
       Message.find({ sentBy: userId }).limit(1000),
       memberId ? Event.find({ 'rsvps.userId': memberId }).select('title startDate rsvps') : Promise.resolve([]),
+      // Resource submissions the user filed — erasure deletes these, so Art. 20
+      // portability must hand them back too (they hold the user's name/email).
+      ResourceSubmission.find({ submittedBy: userId }).limit(1000),
     ]);
 
     const consentHistory = await ConsentRecord.find({ userId }).sort({ createdAt: -1 }).limit(1000);
@@ -59,6 +62,7 @@ export class PrivacyService {
       groups: groups.map(g => g.toJSON()),
       bookings: bookings.map(b => b.toJSON()),
       messages: messages.map(m => m.toJSON()),
+      resourceSubmissions: resourceSubmissions.map(s => s.toJSON()),
       consentHistory: consentHistory.map(c => c.toJSON()),
       events: events.map(e => ({
         id: e._id,
@@ -85,6 +89,15 @@ export class PrivacyService {
     const member = await Member.findOne({ userId });
     const memberId = member?._id;
 
+    // Resolve the user's plaintext email up front (decrypted via toJSON) so we
+    // can also reach ANONYMOUS resource submissions, which carry the submitter's
+    // email but no submittedBy link.
+    const userDoc = await User.findById(userId);
+    const userEmail = userDoc ? (userDoc.toJSON() as { email?: string }).email : undefined;
+    const submissionFilter = userEmail
+      ? { $or: [{ submittedBy: userId }, { submitterEmail: userEmail }] }
+      : { submittedBy: userId };
+
     await Promise.all([
       // Hard-delete private, user-owned data
       MemberCareNote.deleteMany({ memberId: memberId ?? null }),
@@ -92,7 +105,7 @@ export class PrivacyService {
       PrayerResponse.deleteMany({ userId }),
       RefreshToken.deleteMany({ userId }),
       Booking.deleteMany({ bookedBy: userId }),
-      ResourceSubmission.deleteMany({ submittedBy: userId }),
+      ResourceSubmission.deleteMany(submissionFilter),
       Message.deleteMany({ sentBy: userId }),
       ConsentRecord.deleteMany({ userId }),
 
@@ -108,12 +121,18 @@ export class PrivacyService {
       Sermon.updateMany({ createdBy: userId }, { $unset: { createdBy: 1 } }),
     ]);
 
-    // Member-id-keyed references (group membership, event RSVPs, volunteer slots)
+    // Member-id-keyed references (group membership, event RSVPs, volunteer slots,
+    // household roster). Without the Household $pull the deleted member's id would
+    // dangle in Household.members forever.
     if (memberId) {
       await Promise.all([
         Group.updateMany({ 'members.userId': memberId }, { $pull: { members: { userId: memberId } } }),
         Event.updateMany({ 'rsvps.userId': memberId }, { $pull: { rsvps: { userId: memberId } } }),
         Event.updateMany({ 'volunteerSlots.filled': memberId }, { $pull: { 'volunteerSlots.$[].filled': memberId } }),
+        (await import('../models/Household.js')).Household.updateMany(
+          { members: memberId },
+          { $pull: { members: memberId } },
+        ),
       ]);
     }
 
