@@ -2,9 +2,10 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import mongoose, { Schema } from 'mongoose';
 import { connectTestDb, disconnectTestDb } from '../../setup.js';
 import { encryptionPlugin } from '../../../src/models/plugins/encryption.plugin.js';
-import { sha256 } from '@opusheart/shared';
+import { blindIndex } from '../../../src/utils/blindIndex.js';
 
-// Set encryption key for tests
+// Set encryption key for tests. blindIndex derives its HKDF subkey lazily on the
+// first call (not at import), so setting this here is sufficient.
 process.env['ENCRYPTION_KEY'] = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 interface ITestDoc {
@@ -73,7 +74,7 @@ describe('encryption plugin', () => {
     await TestModel.create({ name: 'Alice', email: 'alice@test.com', publicField: 'a' });
     await TestModel.create({ name: 'Bob', email: 'bob@test.com', publicField: 'b' });
 
-    const aliceHash = sha256('alice@test.com');
+    const aliceHash = blindIndex('alice@test.com');
     const found = await TestModel.findOne({ emailHash: aliceHash }).lean();
     expect(found).not.toBeNull();
   });

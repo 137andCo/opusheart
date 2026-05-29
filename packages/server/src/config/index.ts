@@ -16,9 +16,26 @@ export interface AppConfig {
   };
   encryption: { key: string };
   cors: { origins: string[] };
+  trustProxy: number | boolean | string;
   features: FeatureToggles;
   instance: { name: string; url: string };
   vertical: string;
+}
+
+/**
+ * Parse the TRUST_PROXY setting for Express's `trust proxy`. Every shipped deploy
+ * topology (Compose, Swarm, k8s) puts a reverse proxy in front, so the default is
+ * `1` (trust exactly one hop) — required for per-IP rate limiting and accurate
+ * audit IPs. Operators running with NO proxy should set TRUST_PROXY=false to stop
+ * clients from spoofing X-Forwarded-For.
+ */
+function parseTrustProxy(raw: string | undefined): number | boolean | string {
+  if (raw === undefined || raw === '') return 1;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  const n = Number(raw);
+  if (Number.isInteger(n) && n >= 0) return n;
+  return raw; // subnet / 'loopback' / CSV — passed through to Express verbatim
 }
 
 /**
@@ -101,6 +118,7 @@ export function loadConfig(): AppConfig {
     cors: {
       origins: corsOrigins,
     },
+    trustProxy: parseTrustProxy(process.env['TRUST_PROXY']),
     features: {
       giving: process.env['FEATURE_GIVING'] === 'true',
       attendance: process.env['FEATURE_ATTENDANCE'] === 'true',

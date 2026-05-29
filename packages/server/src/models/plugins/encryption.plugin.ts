@@ -1,9 +1,10 @@
 import { Schema } from 'mongoose';
-import { encrypt, decrypt, sha256 } from '@opusheart/shared';
+import { encrypt, decrypt } from '@opusheart/shared';
+import { blindIndex } from '../../utils/blindIndex.js';
 
 interface EncryptionPluginOptions {
   fields: string[];        // fields to encrypt
-  hashFields?: string[];   // fields to create SHA-256 hash lookups for (e.g., email -> emailHash)
+  hashFields?: string[];   // fields to create keyed blind-index lookups for (e.g., email -> emailHash)
 }
 
 /**
@@ -69,9 +70,9 @@ export function encryptionPlugin(schema: Schema, options: EncryptionPluginOption
       const value = this.get(field) as string | undefined;
       if (value && this.isModified(field)) {
         this.set(field, encrypt(value, key));
-        // Create hash if this field has a hash counterpart
+        // Create keyed blind index if this field has a hash counterpart
         if (hashFields.includes(field)) {
-          this.set(`${field}Hash`, sha256(value));
+          this.set(`${field}Hash`, blindIndex(value));
         }
       }
     }
@@ -86,9 +87,12 @@ export function encryptionPlugin(schema: Schema, options: EncryptionPluginOption
         try {
           doc[field] = decrypt(value, key);
         } catch (err) {
-          // Log decryption failures — could indicate tampering or key mismatch
+          // FAIL CLOSED: a decrypt failure means tampering, key mismatch, or
+          // corruption. Returning the raw ciphertext here would silently leak it
+          // to the caller as if it were plaintext, so we throw instead. The
+          // GCM auth tag makes this a genuine integrity signal, not noise.
           console.error(`[SECURITY] Decryption failed for field "${field}":`, err instanceof Error ? err.message : err);
-          // Leave field as-is (ciphertext) rather than silently dropping data
+          throw new Error(`Decryption failed for field "${field}" — possible tampering or key mismatch`, { cause: err });
         }
       }
     }

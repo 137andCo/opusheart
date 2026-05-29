@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
-import { encrypt, decrypt, sha256 } from '@opusheart/shared';
+import { encrypt, decrypt } from '@opusheart/shared';
+import { blindIndex } from '../utils/blindIndex.js';
 
 export interface IHousehold {
   name: string;
@@ -48,7 +49,7 @@ householdSchema.pre('save', function () {
     const value = this.get(`address.${field}`) as string | undefined;
     if (value && this.isModified(`address.${field}`)) {
       if (field === 'zip') {
-        this.set('address.zipHash', sha256(value));
+        this.set('address.zipHash', blindIndex(value));
       }
       this.set(`address.${field}`, encrypt(value, key));
     }
@@ -66,7 +67,11 @@ function decryptAddress(ret: Record<string, unknown>): void {
       try {
         addr[field] = decrypt(value, key);
       } catch {
-        // Field might not be encrypted
+        // Address fields legitimately mix ciphertext with plaintext: `country`
+        // carries a schema default ('US') that is never encrypted, so a decrypt
+        // failure here is expected for defaulted/plaintext values, not an
+        // integrity signal. Leave the value as-is. (Uniformly-encrypted fields
+        // fail closed in encryption.plugin.ts.)
       }
     }
   }

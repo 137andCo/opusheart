@@ -3,10 +3,34 @@ import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
 import * as OTPAuth from 'otpauth';
 import { sha256, decrypt } from '@opusheart/shared';
+import { blindIndex } from '../utils/blindIndex.js';
 import { User, type IUserDocument } from '../models/User.js';
 import { RefreshToken } from '../models/RefreshToken.js';
 import type { AppConfig } from '../config/index.js';
 import { AppError } from '../utils/errors.js';
+
+// ── Account lockout & MFA enrollment policy ──────────────────────────────────
+const MAX_FAILED_LOGINS = 5;          // consecutive failures before lockout
+const LOCKOUT_MS = 15 * 60 * 1000;    // 15-minute lockout window
+const MFA_ENROLL_TTL_MS = 10 * 60 * 1000; // pending enrollment must confirm within 10 min
+const TOTP_PERIOD = 30;               // seconds per TOTP step
+
+const ARGON2_OPTS: argon2.Options = {
+  type: argon2.argon2id,
+  memoryCost: 65536,
+  timeCost: 3,
+  parallelism: 4,
+};
+
+// Precomputed dummy hash for the "user not found" branch so login latency does
+// not reveal whether an email is registered (account-enumeration timing oracle).
+let dummyHashPromise: Promise<string> | null = null;
+function dummyHash(): Promise<string> {
+  if (!dummyHashPromise) {
+    dummyHashPromise = argon2.hash('opusheart-nonexistent-account', ARGON2_OPTS);
+  }
+  return dummyHashPromise;
+}
 
 export interface TokenPair {
   accessToken: string;
@@ -32,18 +56,13 @@ export class AuthService {
     lastName: string;
     phone?: string;
   }): Promise<IUserDocument> {
-    const emailHash = sha256(input.email);
+    const emailHash = blindIndex(input.email);
     const existing = await User.findOne({ emailHash });
     if (existing) {
       throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
     }
 
-    const passwordHash = await argon2.hash(input.password, {
-      type: argon2.argon2id,
-      memoryCost: 65536,
-      timeCost: 3,
-      parallelism: 4,
-    });
+    const passwordHash = await argon2.hash(input.password, ARGON2_OPTS);
 
     const user = await User.create({
       email: input.email,
@@ -52,7 +71,7 @@ export class AuthService {
       firstName: input.firstName,
       lastName: input.lastName,
       phone: input.phone,
-      phoneHash: input.phone ? sha256(input.phone) : undefined,
+      phoneHash: input.phone ? blindIndex(input.phone) : undefined,
       // SECURITY: never honor a client-supplied role. Self-registered accounts
       // are always 'visitor'; elevation happens only via the admin role endpoint.
       role: 'visitor',
@@ -91,22 +110,40 @@ export class AuthService {
 
   /**
    * The encryption plugin only decrypts on toJSON/toObject, so a secret read off
-   * a freshly-fetched document is still ciphertext. Resolve it to the plaintext
-   * base32 either way: try to decrypt, and fall back to the raw value if it was
-   * never encrypted (defensive — should always be encrypted at rest).
+   * a freshly-fetched document is still ciphertext. Decrypt it to the plaintext
+   * base32. FAIL CLOSED: a decrypt failure means tampering / key mismatch, so we
+   * throw rather than fall back to the raw (ciphertext) value — verifying a TOTP
+   * against ciphertext would just always fail anyway, and silently treating
+   * ciphertext as a secret is exactly the leak we want to avoid.
    */
   private resolveSecret(stored: string): string {
-    try {
-      return decrypt(stored, this.config.encryption.key);
-    } catch {
-      return stored;
-    }
+    return decrypt(stored, this.config.encryption.key);
   }
 
-  private verifyTotp(storedSecret: string, code: string): boolean {
+  /**
+   * Validate a TOTP code and return the absolute timestep it matched, or null.
+   * The step lets the caller reject in-window replay (window:1 accepts 3 codes;
+   * without consumption tracking the same code works for ~90s).
+   */
+  private totpStep(storedSecret: string, code: string): number | null {
     const totp = this.buildTotp(this.resolveSecret(storedSecret));
     // window:1 tolerates ±1 step (30s) of clock drift; delta===null means no match.
-    return totp.validate({ token: code.trim(), window: 1 }) !== null;
+    const delta = totp.validate({ token: code.trim(), window: 1 });
+    if (delta === null) return null;
+    return Math.floor(Date.now() / 1000 / TOTP_PERIOD) + delta;
+  }
+
+  /**
+   * Verify a TOTP code AND consume its timestep on the user document (caller must
+   * save). Rejects a code whose step was already used — closes the replay window.
+   */
+  private consumeTotp(user: IUserDocument, code: string): boolean {
+    if (!user.mfaSecret) return false;
+    const step = this.totpStep(user.mfaSecret, code);
+    if (step === null) return false;
+    if (user.mfaLastUsedStep != null && step <= user.mfaLastUsedStep) return false;
+    user.mfaLastUsedStep = step;
+    return true;
   }
 
   /**
@@ -124,6 +161,8 @@ export class AuthService {
 
     user.mfaSecret = secret.base32; // encrypted by the model plugin on save
     user.mfaEnabled = false;
+    user.mfaEnrollStartedAt = new Date();
+    user.mfaLastUsedStep = undefined;
     await user.save();
 
     return { otpauthUrl: totp.toString(), secret: secret.base32 };
@@ -134,10 +173,23 @@ export class AuthService {
     const user = await User.findById(userId);
     if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
     if (!user.mfaSecret) throw new AppError('MFA enrollment not started', 400, 'MFA_NOT_ENROLLING');
-    if (!this.verifyTotp(user.mfaSecret, code)) {
+    // Pending enrollment expires — a stale secret left unconfirmed must be re-enrolled.
+    if (
+      !user.mfaEnabled &&
+      (!user.mfaEnrollStartedAt || Date.now() - user.mfaEnrollStartedAt.getTime() > MFA_ENROLL_TTL_MS)
+    ) {
+      user.mfaSecret = undefined;
+      user.mfaEnrollStartedAt = undefined;
+      await user.save();
+      throw new AppError('MFA enrollment expired — start again', 400, 'MFA_ENROLL_EXPIRED');
+    }
+    // Validate without consuming the step — the user legitimately logs in moments
+    // later with the current code; the login path is where replay is blocked.
+    if (this.totpStep(user.mfaSecret, code) === null) {
       throw new AppError('Invalid MFA code', 400, 'INVALID_MFA_CODE');
     }
     user.mfaEnabled = true;
+    user.mfaEnrollStartedAt = undefined;
     await user.save();
   }
 
@@ -146,11 +198,12 @@ export class AuthService {
     const user = await User.findById(userId);
     if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
     if (!user.mfaEnabled || !user.mfaSecret) throw new AppError('MFA is not enabled', 400, 'MFA_NOT_ENABLED');
-    if (!this.verifyTotp(user.mfaSecret, code)) {
+    if (this.totpStep(user.mfaSecret, code) === null) {
       throw new AppError('Invalid MFA code', 400, 'INVALID_MFA_CODE');
     }
     user.mfaEnabled = false;
     user.mfaSecret = undefined;
+    user.mfaLastUsedStep = undefined;
     await user.save();
   }
 
@@ -159,14 +212,24 @@ export class AuthService {
     password: string,
     mfaCode?: string,
   ): Promise<{ user: IUserDocument; tokens: TokenPair }> {
-    const emailHash = sha256(email);
+    const emailHash = blindIndex(email);
     const user = await User.findOne({ emailHash });
     if (!user || !user.active) {
+      // Burn an equivalent argon2 verify so response time doesn't reveal whether
+      // the account exists (enumeration timing oracle).
+      await argon2.verify(await dummyHash(), password).catch(() => false);
       throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
+    }
+
+    // Per-account lockout — independent of the IP rate limiter, so a distributed
+    // password/MFA brute force against one account is still capped.
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new AppError('Account temporarily locked. Try again later.', 423, 'ACCOUNT_LOCKED');
     }
 
     const valid = await argon2.verify(user.passwordHash, password);
     if (!valid) {
+      await this.registerLoginFailure(user);
       throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
     }
 
@@ -175,16 +238,48 @@ export class AuthService {
       if (!mfaCode) {
         throw new AppError('MFA code required', 401, 'MFA_REQUIRED');
       }
-      if (!user.mfaSecret || !this.verifyTotp(user.mfaSecret, mfaCode)) {
+      // consumeTotp both validates and records the timestep (blocks in-window replay).
+      if (!this.consumeTotp(user, mfaCode)) {
+        await this.registerLoginFailure(user);
         throw new AppError('Invalid MFA code', 401, 'INVALID_MFA_CODE');
       }
     }
 
+    // Success — clear any failure/lock state.
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = undefined;
     user.lastLoginAt = new Date();
     await user.save();
 
     const tokens = await this.generateTokens(user);
     return { user, tokens };
+  }
+
+  /** Increment the failure counter and lock the account once the threshold is hit. */
+  private async registerLoginFailure(user: IUserDocument): Promise<void> {
+    user.failedLoginAttempts = (user.failedLoginAttempts ?? 0) + 1;
+    if (user.failedLoginAttempts >= MAX_FAILED_LOGINS) {
+      user.lockedUntil = new Date(Date.now() + LOCKOUT_MS);
+      user.failedLoginAttempts = 0;
+    }
+    await user.save();
+  }
+
+  /**
+   * Change the caller's password after verifying the current one. Invalidates all
+   * existing sessions (refresh tokens + outstanding access tokens via
+   * tokenInvalidatedAt) so a compromised session cannot survive the change.
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await User.findById(userId);
+    if (!user) throw new AppError('User not found', 404, 'NOT_FOUND');
+    const valid = await argon2.verify(user.passwordHash, currentPassword);
+    if (!valid) throw new AppError('Current password is incorrect', 401, 'INVALID_CREDENTIALS');
+
+    user.passwordHash = await argon2.hash(newPassword, ARGON2_OPTS);
+    user.tokenInvalidatedAt = new Date();
+    await user.save();
+    await RefreshToken.updateMany({ userId: user._id }, { invalidated: true });
   }
 
   async refreshTokens(refreshTokenValue: string): Promise<TokenPair> {

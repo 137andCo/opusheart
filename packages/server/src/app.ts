@@ -38,6 +38,12 @@ import type { AppConfig } from './config/index.js';
 export function createApp(config: AppConfig): express.Application {
   const app = express();
 
+  // Behind a reverse proxy (nginx / ingress / cloud LB in every shipped topology).
+  // Without this, req.ip is the proxy's IP — collapsing per-IP rate limiting into
+  // one global bucket and poisoning audit/consent IP records. Operators with no
+  // proxy set TRUST_PROXY=false. See config.parseTrustProxy.
+  app.set('trust proxy', config.trustProxy);
+
   // Security
   app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },

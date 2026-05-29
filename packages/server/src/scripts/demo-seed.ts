@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import argon2 from 'argon2';
-import { sha256 } from '@opusheart/shared';
+import { blindIndex } from '../utils/blindIndex.js';
 import { loadConfig } from '../config/index.js';
 import { User } from '../models/User.js';
 import { Member } from '../models/Member.js';
@@ -156,7 +156,7 @@ async function seed(): Promise<void> {
 
   const adminUser = await User.create({
     email: adminEmail,
-    emailHash: sha256(adminEmail),
+    emailHash: blindIndex(adminEmail),
     passwordHash,
     firstName: 'Sarah',
     lastName: 'Mitchell',
@@ -166,7 +166,7 @@ async function seed(): Promise<void> {
 
   const pastorUser = await User.create({
     email: pastorEmail,
-    emailHash: sha256(pastorEmail),
+    emailHash: blindIndex(pastorEmail),
     passwordHash,
     firstName: 'David',
     lastName: 'Chen',
@@ -179,7 +179,7 @@ async function seed(): Promise<void> {
     const email = `${m.firstName.toLowerCase()}.${m.lastName.toLowerCase()}@example.com`;
     const user = await User.create({
       email,
-      emailHash: sha256(email),
+      emailHash: blindIndex(email),
       passwordHash,
       firstName: m.firstName,
       lastName: m.lastName,

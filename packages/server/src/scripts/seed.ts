@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import argon2 from 'argon2';
-import { sha256 } from '@opusheart/shared';
+import { blindIndex } from '../utils/blindIndex.js';
 import { User } from '../models/User.js';
 import { FeatureConfig } from '../models/FeatureConfig.js';
 import { InstanceSettings } from '../models/InstanceSettings.js';
@@ -26,9 +26,9 @@ async function seed(): Promise<void> {
   await User.deleteMany({
     emailHash: {
       $in: [
-        sha256('admin@opusheart.local'),
-        sha256('pastor@opusheart.local'),
-        sha256('member@opusheart.local'),
+        blindIndex('admin@opusheart.local'),
+        blindIndex('pastor@opusheart.local'),
+        blindIndex('member@opusheart.local'),
       ],
     },
   });
@@ -44,7 +44,7 @@ async function seed(): Promise<void> {
   const users = [
     {
       email: 'admin@opusheart.local',
-      emailHash: sha256('admin@opusheart.local'),
+      emailHash: blindIndex('admin@opusheart.local'),
       passwordHash,
       firstName: 'System',
       lastName: 'Admin',
@@ -52,7 +52,7 @@ async function seed(): Promise<void> {
     },
     {
       email: 'pastor@opusheart.local',
-      emailHash: sha256('pastor@opusheart.local'),
+      emailHash: blindIndex('pastor@opusheart.local'),
       passwordHash,
       firstName: 'Pastor',
       lastName: 'John',
@@ -60,7 +60,7 @@ async function seed(): Promise<void> {
     },
     {
       email: 'member@opusheart.local',
-      emailHash: sha256('member@opusheart.local'),
+      emailHash: blindIndex('member@opusheart.local'),
       passwordHash,
       firstName: 'Jane',
       lastName: 'Doe',
@@ -179,7 +179,7 @@ async function seed(): Promise<void> {
 
   // Seed community resources
   await Resource.deleteMany({});
-  const adminUser = await User.findOne({ emailHash: sha256('admin@opusheart.local') });
+  const adminUser = await User.findOne({ emailHash: blindIndex('admin@opusheart.local') });
   const adminId = adminUser?._id;
 
   const resources = [
@@ -395,8 +395,8 @@ async function seed(): Promise<void> {
 
   // Seed prayer requests
   await PrayerRequest.deleteMany({});
-  const pastorUser = await User.findOne({ emailHash: sha256('pastor@opusheart.local') });
-  const memberUser = await User.findOne({ emailHash: sha256('member@opusheart.local') });
+  const pastorUser = await User.findOne({ emailHash: blindIndex('pastor@opusheart.local') });
+  const memberUser = await User.findOne({ emailHash: blindIndex('member@opusheart.local') });
 
   const prayerRequests = [
     {

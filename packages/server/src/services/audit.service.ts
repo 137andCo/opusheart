@@ -1,10 +1,13 @@
 import { AuditLog } from '../models/AuditLog.js';
-import { sha256 } from '@opusheart/shared';
+import { blindIndex } from '../utils/blindIndex.js';
 import { getRequestContext } from '../middleware/requestContext.js';
 
 interface AuditEntry {
   action: string;
-  actorEmail: string;
+  /** Plaintext actor email — hashed to a stable blind index before persistence. */
+  actorEmail?: string;
+  /** Pre-computed actor blind index (e.g. User.emailHash). Takes precedence over actorEmail. */
+  actorHash?: string;
   actorRole: string;
   target: string;
   targetId?: string;
@@ -25,7 +28,11 @@ async function flushBatch(): Promise<void> {
 
   const docs = entries.map(entry => ({
     action: entry.action,
-    actorHash: sha256(entry.actorEmail),
+    // Single canonical scheme: a blind index over the actor's email. Callers may
+    // pass a pre-computed hash (User.emailHash) OR the plaintext email; both
+    // resolve to the SAME value (emailHash IS blindIndex(email)), so an actor's
+    // login events and their data-access events correlate. 'unknown' if neither.
+    actorHash: entry.actorHash ?? (entry.actorEmail ? blindIndex(entry.actorEmail) : 'unknown'),
     actorRole: entry.actorRole,
     target: entry.target,
     targetId: entry.targetId,

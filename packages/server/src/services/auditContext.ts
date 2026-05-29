@@ -12,22 +12,23 @@ export async function audit(
   req: Request,
   entry: { action: string; target: string; targetId?: string; metadata?: Record<string, unknown> },
 ): Promise<void> {
-  let actorEmail = 'unknown';
+  let actorHash: string | undefined;
   const role = req.user?.role ?? 'anonymous';
   try {
     if (req.user?.id) {
-      const user = await User.findById(req.user.id).select('email').lean();
-      // email is stored encrypted; for a stable pseudonymous actor id we hash
-      // the stored value as-is (the raw email never lands in the log either way).
-      if (user?.email) actorEmail = user.email;
+      // emailHash is already the keyed blind index of the email — use it directly
+      // as the actor id. (Reading the encrypted `email` via .lean() yields
+      // ciphertext, producing a hash that can't correlate with login events.)
+      const user = await User.findById(req.user.id).select('emailHash').lean();
+      if (user?.emailHash) actorHash = user.emailHash;
     }
   } catch {
-    // ignore — fall back to 'unknown'
+    // ignore — fall back to 'unknown' (actorHash stays undefined)
   }
 
   await logAudit({
     action: entry.action,
-    actorEmail,
+    actorHash,
     actorRole: role,
     target: entry.target,
     targetId: entry.targetId,

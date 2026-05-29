@@ -12,6 +12,14 @@ export interface IUser {
   role: 'admin' | 'pastor' | 'leader' | 'member' | 'visitor';
   mfaEnabled: boolean;
   mfaSecret?: string;
+  /** Last TOTP timestep consumed at login — blocks in-window replay of a code. */
+  mfaLastUsedStep?: number;
+  /** When the pending (unconfirmed) MFA enrollment began — enforces an enroll TTL. */
+  mfaEnrollStartedAt?: Date;
+  /** Consecutive failed login attempts (password or MFA) since last success. */
+  failedLoginAttempts: number;
+  /** If set and in the future, login is refused regardless of credentials. */
+  lockedUntil?: Date;
   avatar?: string;
   locale: string;
   timezone: string;
@@ -48,6 +56,10 @@ const userSchema = new Schema<IUserDocument>(
     },
     mfaEnabled: { type: Boolean, default: false },
     mfaSecret: { type: String },
+    mfaLastUsedStep: { type: Number },
+    mfaEnrollStartedAt: { type: Date },
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockedUntil: { type: Date },
     avatar: { type: String },
     locale: { type: String, default: 'en' },
     timezone: { type: String, default: 'America/New_York' },
