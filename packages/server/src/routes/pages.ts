@@ -61,8 +61,9 @@ export function pageRoutes(config: AppConfig): Router {
     }
   });
 
-  // GET /api/pages/:id — get page
-  router.get('/:id', async (req, res) => {
+  // GET /api/pages/:id — get page (editor endpoint: returns drafts/archived too,
+  // so it must be staff-only; the public reads published pages via /slug/:slug)
+  router.get('/:id', authorize('leader', 'pastor', 'admin'), async (req, res) => {
     try {
       const id = req.params['id'] as string;
       const page = await pageService.findById(id);

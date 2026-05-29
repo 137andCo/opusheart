@@ -25,10 +25,13 @@ export function groupRoutes(config: AppConfig): Router {
   router.use(authenticate(config));
   router.use(featureGate('groups', config));
 
-  // List all groups
+  // List all groups (scoped to what the viewer may see)
   router.get('/', validate(groupQuerySchema, 'query'), async (req, res) => {
     try {
-      const result = await groupService.findAll(req.query as any);
+      const result = await groupService.findAll(req.query as any, {
+        userId: (req as any).user.id,
+        role: req.user!.role,
+      });
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ error: { message: err.message, code: err.code } });
@@ -47,10 +50,13 @@ export function groupRoutes(config: AppConfig): Router {
     }
   });
 
-  // Get single group
+  // Get single group (non-members get 404 for non-public groups — IDOR guard)
   router.get('/:id', async (req, res) => {
     try {
-      const group = await groupService.findById(req.params['id']! as string);
+      const group = await groupService.findByIdForViewer(req.params['id']! as string, {
+        userId: (req as any).user.id,
+        role: req.user!.role,
+      });
       res.json({ group: group.toJSON() });
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ error: { message: err.message, code: err.code } });

@@ -2,6 +2,16 @@ import { Group, type IGroupDocument } from '../models/Group.js';
 import { AppError } from '../utils/errors.js';
 import type { CreateGroupInput, UpdateGroupInput } from '@opusheart/shared/schemas/group.schema.js';
 
+export interface GroupViewer {
+  userId: string;
+  role: string;
+}
+
+/** Staff see every group; everyone else only public groups + their own. */
+function isPrivileged(role: string | undefined): boolean {
+  return role === 'admin' || role === 'pastor';
+}
+
 export class GroupService {
   async create(data: CreateGroupInput, createdBy: string): Promise<IGroupDocument> {
     const group = await Group.create({
@@ -18,13 +28,33 @@ export class GroupService {
     return group;
   }
 
+  /** True if the viewer may see this group (read its details + member roster). */
+  canView(group: IGroupDocument, viewer: GroupViewer): boolean {
+    if (group.visibility === 'public') return true;
+    if (isPrivileged(viewer.role)) return true;
+    return group.members.some(m => m.userId.toString() === viewer.userId);
+  }
+
+  /**
+   * Fetch a group for a specific viewer. Returns 404 (not 403) for groups the
+   * viewer can't see, so a non-member can't even confirm a private group exists
+   * or harvest its member roster by ID. (IDOR fix.)
+   */
+  async findByIdForViewer(id: string, viewer: GroupViewer): Promise<IGroupDocument> {
+    const group = await this.findById(id);
+    if (!this.canView(group, viewer)) {
+      throw new AppError('Group not found', 404, 'GROUP_NOT_FOUND');
+    }
+    return group;
+  }
+
   async findAll(query: {
     type?: string;
     visibility?: string;
     active?: boolean;
     page?: number;
     limit?: number;
-  }): Promise<{
+  }, viewer?: GroupViewer): Promise<{
     groups: IGroupDocument[];
     total: number;
     page: number;
@@ -35,8 +65,19 @@ export class GroupService {
     const filter: Record<string, unknown> = {};
 
     if (query.type) filter['type'] = query.type;
-    if (query.visibility) filter['visibility'] = query.visibility;
     if (query.active !== undefined) filter['active'] = query.active;
+
+    // Visibility scoping. Staff (or the unauthenticated public directory, which
+    // passes no viewer but pins visibility:'public' below) may filter freely;
+    // a normal member only ever sees public groups + the ones they belong to,
+    // regardless of any visibility query param they try to pass.
+    if (viewer && isPrivileged(viewer.role)) {
+      if (query.visibility) filter['visibility'] = query.visibility;
+    } else if (viewer) {
+      filter['$or'] = [{ visibility: 'public' }, { 'members.userId': viewer.userId }];
+    } else {
+      filter['visibility'] = query.visibility ?? 'public';
+    }
 
     const [groups, total] = await Promise.all([
       Group.find(filter).sort({ name: 1 }).skip((page - 1) * limit).limit(limit),

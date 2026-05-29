@@ -262,6 +262,80 @@ describe('Group API', () => {
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('GROUP_NOT_FOUND');
     });
+
+    it('returns 404 to a non-member for a members-only group (IDOR/roster guard)', async () => {
+      const owner = await createUser({ role: 'pastor' });
+      const ownerToken = makeToken(owner._id.toString(), 'pastor');
+      const created = await request(app).post('/api/groups').set('Authorization', `Bearer ${ownerToken}`)
+        .send(buildGroup({ name: 'Private Cohort', visibility: 'members' }));
+      const groupId = created.body.group.id;
+
+      const outsider = await createUser({ role: 'member' });
+      const outsiderToken = makeToken(outsider._id.toString(), 'member');
+
+      const res = await request(app).get(`/api/groups/${groupId}`)
+        .set('Authorization', `Bearer ${outsiderToken}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body.group).toBeUndefined();
+    });
+
+    it('lets a member read a members-only group they belong to', async () => {
+      const owner = await createUser({ role: 'pastor' });
+      const ownerToken = makeToken(owner._id.toString(), 'pastor');
+      const created = await request(app).post('/api/groups').set('Authorization', `Bearer ${ownerToken}`)
+        .send(buildGroup({ name: 'Joined Cohort', visibility: 'members' }));
+      const groupId = created.body.group.id;
+
+      const joiner = await createUser({ role: 'member' });
+      const joinerToken = makeToken(joiner._id.toString(), 'member');
+      await request(app).post(`/api/groups/${groupId}/join`).set('Authorization', `Bearer ${joinerToken}`);
+
+      const res = await request(app).get(`/api/groups/${groupId}`)
+        .set('Authorization', `Bearer ${joinerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.group.name).toBe('Joined Cohort');
+    });
+  });
+
+  // ─── GET /api/groups list scoping ─────────────────────────
+
+  describe('GET /api/groups (visibility scoping)', () => {
+    it('hides members-only groups a normal member does not belong to', async () => {
+      const pastor = await createUser({ role: 'pastor' });
+      const pastorToken = makeToken(pastor._id.toString(), 'pastor');
+      await request(app).post('/api/groups').set('Authorization', `Bearer ${pastorToken}`)
+        .send(buildGroup({ name: 'Open Group', visibility: 'public' }));
+      await request(app).post('/api/groups').set('Authorization', `Bearer ${pastorToken}`)
+        .send(buildGroup({ name: 'Secret Group', visibility: 'members' }));
+
+      const outsider = await createUser({ role: 'member' });
+      const outsiderToken = makeToken(outsider._id.toString(), 'member');
+
+      const res = await request(app).get('/api/groups').set('Authorization', `Bearer ${outsiderToken}`);
+
+      expect(res.status).toBe(200);
+      const names = res.body.groups.map((g: { name: string }) => g.name);
+      expect(names).toContain('Open Group');
+      expect(names).not.toContain('Secret Group');
+    });
+
+    it('a member cannot unmask members-only groups via ?visibility=members', async () => {
+      const pastor = await createUser({ role: 'pastor' });
+      const pastorToken = makeToken(pastor._id.toString(), 'pastor');
+      await request(app).post('/api/groups').set('Authorization', `Bearer ${pastorToken}`)
+        .send(buildGroup({ name: 'Secret Group', visibility: 'members' }));
+
+      const outsider = await createUser({ role: 'member' });
+      const outsiderToken = makeToken(outsider._id.toString(), 'member');
+
+      const res = await request(app).get('/api/groups?visibility=members')
+        .set('Authorization', `Bearer ${outsiderToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.groups).toHaveLength(0);
+    });
   });
 
   // ─── PUT /api/groups/:id ──────────────────────────────────

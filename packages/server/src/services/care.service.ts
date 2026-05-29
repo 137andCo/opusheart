@@ -53,6 +53,19 @@ export class CareService {
   }
 
   async findByMember(memberId: string, query: CareNoteQuery): Promise<PaginatedResult> {
+    // CONSENT (GDPR Art. 9): gate READS on current consent too, not just writes.
+    // If the member has withdrawn care-tracking consent, staff can no longer
+    // read these special-category notes (erasure removes them entirely; this
+    // stops ongoing processing the moment consent lapses).
+    const member = await Member.findById(memberId).select('userId').lean();
+    if (!member) {
+      throw new AppError('Member not found', 404, 'MEMBER_NOT_FOUND');
+    }
+    const user = await User.findById(member.userId).select('privacySettings').lean();
+    if (!user?.privacySettings?.allowCareTracking) {
+      throw new AppError('This member has not consented to care tracking', 403, 'CARE_CONSENT_REQUIRED');
+    }
+
     const filter: Record<string, unknown> = { memberId };
 
     if (query.type) {

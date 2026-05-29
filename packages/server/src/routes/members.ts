@@ -48,32 +48,11 @@ export function memberRoutes(config: AppConfig): Router {
     }
   });
 
-  // GET /api/members/:id — get member (privacy-filtered)
+  // GET /api/members/:id — get member (privacy-filtered in the service layer)
   router.get('/:id', async (req, res) => {
     try {
       const id = req.params['id'] as string;
-      const member = await memberService.findById(id);
-
-      // Apply privacy filter for non-pastor/admin
-      const isPastorOrAdmin = req.user!.role === 'pastor' || req.user!.role === 'admin';
-      if (!isPastorOrAdmin) {
-        const user = member['userId'] as Record<string, unknown> | null;
-        const targetUserId = (user?.['id'] || user?.['_id'])?.toString();
-        const isSelf = targetUserId === req.user!.id;
-        const privacy = user?.['privacySettings'] as Record<string, boolean> | undefined;
-
-        // Directory opt-out: a member who is not listed in the directory is
-        // hidden from other members entirely (they can still view their own).
-        if (!isSelf && privacy?.['showInDirectory'] === false) {
-          res.status(404).json({ error: { message: 'Member not found', code: 'MEMBER_NOT_FOUND' } });
-          return;
-        }
-        if (user && !isSelf) {
-          if (!privacy?.['showEmail']) delete user['email'];
-          if (!privacy?.['showPhone']) delete user['phone'];
-        }
-      }
-
+      const member = await memberService.findByIdForViewer(id, { id: req.user!.id, role: req.user!.role });
       res.json({ member });
     } catch (err) {
       if (err instanceof AppError) {

@@ -268,6 +268,7 @@ describe('Security Tests', () => {
     it('should allow pastor to access care notes', async () => {
       const pastorId = new mongoose.Types.ObjectId().toString();
       const memberId = new mongoose.Types.ObjectId();
+      const memberUserId = new mongoose.Types.ObjectId();
 
       await User.create({
         _id: pastorId,
@@ -279,7 +280,19 @@ describe('Security Tests', () => {
         role: 'pastor',
       });
 
-      await Member.create({ _id: memberId, userId: new mongoose.Types.ObjectId() });
+      // The member's user has consented to care tracking — required for both
+      // creating and now reading care notes (GDPR Art. 9 consent gate).
+      await User.create({
+        _id: memberUserId,
+        email: 'caremember@test.org',
+        emailHash: 'carememberhash',
+        passwordHash: 'hash',
+        firstName: 'Care',
+        lastName: 'Member',
+        role: 'member',
+        privacySettings: { showInDirectory: true, showEmail: false, showPhone: false, allowCareTracking: true },
+      });
+      await Member.create({ _id: memberId, userId: memberUserId });
 
       const pastorToken = makeToken(pastorId, 'pastor');
       const res = await request(app)
@@ -288,6 +301,30 @@ describe('Security Tests', () => {
 
       // Should succeed (200) — pastor has access
       expect(res.status).toBe(200);
+    });
+
+    it('should block care-note reads when the member has not consented', async () => {
+      const pastorId = new mongoose.Types.ObjectId().toString();
+      const memberId = new mongoose.Types.ObjectId();
+      const memberUserId = new mongoose.Types.ObjectId();
+
+      await User.create({
+        _id: pastorId, email: 'pastor2@test.org', emailHash: 'pastorhash2',
+        passwordHash: 'hash', firstName: 'Pastor', lastName: 'Jones', role: 'pastor',
+      });
+      await User.create({
+        _id: memberUserId, email: 'noconsent@test.org', emailHash: 'noconsenthash',
+        passwordHash: 'hash', firstName: 'No', lastName: 'Consent', role: 'member',
+        privacySettings: { showInDirectory: true, showEmail: false, showPhone: false, allowCareTracking: false },
+      });
+      await Member.create({ _id: memberId, userId: memberUserId });
+
+      const res = await request(app)
+        .get(`/api/care/${memberId}`)
+        .set('Authorization', `Bearer ${makeToken(pastorId, 'pastor')}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('CARE_CONSENT_REQUIRED');
     });
 
     it('should prevent member from managing funds (admin-only)', async () => {

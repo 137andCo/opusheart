@@ -64,6 +64,30 @@ export class MemberService {
     return member.toJSON() as unknown as Record<string, unknown>;
   }
 
+  /**
+   * Fetch a member as a specific viewer sees it. Pastors/admins get the full
+   * record; everyone else gets directory + per-field privacy rules applied here
+   * in the service (not the route), so any future caller is safe by default:
+   *  - directory opt-out (showInDirectory=false) -> 404 to non-self viewers
+   *  - email/phone stripped unless the member opted to show them (or it's self)
+   */
+  async findByIdForViewer(id: string, viewer: { id: string; role: string }): Promise<Record<string, unknown>> {
+    const member = await this.findById(id);
+    const isPastorOrAdmin = viewer.role === 'pastor' || viewer.role === 'admin';
+    if (isPastorOrAdmin) return member;
+
+    const user = member['userId'] as Record<string, unknown> | null;
+    const targetUserId = (user?.['id'] || user?.['_id'])?.toString();
+    const isSelf = targetUserId === viewer.id;
+    if (isSelf) return member;
+
+    const privacy = user?.['privacySettings'] as Record<string, boolean> | undefined;
+    if (privacy?.['showInDirectory'] === false) {
+      throw new AppError('Member not found', 404, 'MEMBER_NOT_FOUND');
+    }
+    return this.applyPrivacyFilter(member);
+  }
+
   async findAll(query: MemberQuery, requestingUserRole: string): Promise<PaginatedResult> {
     const filter: Record<string, unknown> = {};
 
