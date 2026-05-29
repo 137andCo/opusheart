@@ -9,6 +9,11 @@ interface NavItem {
   minRole?: string; // minimum role to see this item
 }
 
+// Ascending privilege. UI-only gating — the server enforces real authorization.
+const ROLE_RANK: Record<string, number> = {
+  visitor: 0, member: 1, leader: 2, pastor: 3, admin: 4,
+};
+
 const allNavItems: NavItem[] = [
   { label: 'Dashboard', icon: 'pi pi-home', to: '/' },
   { label: 'Members', icon: 'pi pi-users', to: '/members' },
@@ -25,6 +30,8 @@ const allNavItems: NavItem[] = [
   { label: 'Settings', icon: 'pi pi-cog', to: '/settings', minRole: 'admin' },
 ];
 
+const userRank = computed(() => ROLE_RANK[authStore.user?.role ?? 'visitor'] ?? 0);
+
 const visibleNavItems = computed(() => {
   return allNavItems.filter((item) => {
     // Feature toggle check
@@ -32,7 +39,10 @@ const visibleNavItems = computed(() => {
       const key = item.feature as keyof typeof authStore.features;
       if (!authStore.features[key]) return false;
     }
-    // TODO: role check once ROLE_HIERARCHY is wired
+    // Role check — hide items that require a higher role than the current user.
+    if (item.minRole && userRank.value < (ROLE_RANK[item.minRole] ?? Infinity)) {
+      return false;
+    }
     return true;
   });
 });

@@ -6,7 +6,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      apiBase: 'http://localhost:3000/api',
+      // Must match the server's default port (3020). Override in production with
+      // NUXT_PUBLIC_API_BASE. (Was :3000, which is dead on a fresh clone.)
+      apiBase: 'http://localhost:3020/api',
     },
   },
   app: {
