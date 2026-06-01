@@ -3,7 +3,15 @@
     <template v-if="page">
       <section class="page-content">
         <div v-for="(block, i) in page.content" :key="i" class="content-block">
-          <template v-if="isHeading(block)">
+          <template v-if="block.type === 'hero'">
+            <section class="oh-hero" :class="`align-${block.align || 'left'}`">
+              <p v-if="block.eyebrow" class="oh-hero-eyebrow">{{ block.eyebrow }}</p>
+              <h2 class="oh-hero-heading">{{ block.heading }}</h2>
+              <p v-if="block.subheading" class="oh-hero-sub">{{ block.subheading }}</p>
+              <a v-if="block.ctaLabel && ctaHref(block.ctaHref)" :href="ctaHref(block.ctaHref)!" class="oh-hero-cta">{{ block.ctaLabel }}</a>
+            </section>
+          </template>
+          <template v-else-if="isHeading(block)">
             <component :is="'h' + (block.level || 2)">{{ block.text }}</component>
           </template>
           <template v-else-if="isParagraph(block)">
@@ -48,6 +56,13 @@ const { data, pending } = await useFetch<{ page: any }>(
 );
 
 const page = computed(() => data.value?.page);
+
+// Only allow safe schemes for a hero CTA link (block javascript:/data: etc.).
+function ctaHref(href?: string): string | null {
+  if (!href) return null;
+  const h = href.trim();
+  return /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(h) ? h : null;
+}
 
 function isHeading(block: any) {
   return block.type === 'heading';

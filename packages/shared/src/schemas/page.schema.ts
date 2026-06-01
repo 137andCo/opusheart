@@ -10,7 +10,10 @@ const pageBlockSchema: z.ZodType<unknown> = z.lazy(() =>
       type: z.string(),
       attrs: z.record(z.string(), z.unknown()).optional(),
     })).optional(),
-  })
+  // Keep flat block fields (heading/subheading/src/level/ctaHref/align…) that the
+  // web renderer and the dashboard block editor use; the strict object above would
+  // otherwise strip them on save.
+  }).passthrough()
 );
 
 const pageSeoSchema = z.object({

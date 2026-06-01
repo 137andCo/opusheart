@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PageContentEditor from './PageContentEditor.vue';
+
 const props = defineProps<{
   visible: boolean;
   page: any | null;
@@ -23,6 +25,7 @@ const defaultForm = () => ({
     description: '',
     noIndex: false,
   },
+  content: [] as any[],
 });
 
 const form = ref(defaultForm());
@@ -68,6 +71,7 @@ watch(
           description: props.page.seo?.description || '',
           noIndex: props.page.seo?.noIndex || false,
         },
+        content: Array.isArray(props.page.content) ? JSON.parse(JSON.stringify(props.page.content)) : [],
       };
     } else {
       form.value = defaultForm();
@@ -95,6 +99,7 @@ async function save() {
       slug: form.value.slug.trim(),
       status: form.value.status,
       locale: form.value.locale.trim() || 'en',
+      content: form.value.content,
     };
 
     const seo: Record<string, any> = {};
@@ -134,7 +139,7 @@ async function save() {
     :header="dialogTitle"
     modal
     :closable="true"
-    :style="{ width: '650px', maxWidth: '92vw' }"
+    :style="{ width: '720px', maxWidth: '92vw' }"
     @update:visible="closeDialog"
   >
     <div class="dialog-form">
@@ -191,6 +196,14 @@ async function save() {
           <Checkbox v-model="form.seo.noIndex" :binary="true" input-id="noIndex" />
           <label for="noIndex">No Index (hide from search engines)</label>
         </div>
+      </div>
+
+      <div class="seo-section">
+        <div class="section-header">
+          <span class="section-label">Page Content</span>
+        </div>
+
+        <PageContentEditor v-model="form.content" />
       </div>
     </div>
 

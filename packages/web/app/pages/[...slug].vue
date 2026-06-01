@@ -12,7 +12,15 @@
       <article class="page-content">
         <h1 class="page-title">{{ page.title }}</h1>
         <div v-for="(block, i) in page.content" :key="i" class="content-block">
-          <template v-if="block.type === 'heading'">
+          <template v-if="block.type === 'hero'">
+            <section class="oh-hero" :class="`align-${block.align || 'left'}`">
+              <p v-if="block.eyebrow" class="oh-hero-eyebrow">{{ block.eyebrow }}</p>
+              <h2 class="oh-hero-heading">{{ block.heading }}</h2>
+              <p v-if="block.subheading" class="oh-hero-sub">{{ block.subheading }}</p>
+              <a v-if="block.ctaLabel && ctaHref(block.ctaHref)" :href="ctaHref(block.ctaHref)!" class="oh-hero-cta">{{ block.ctaLabel }}</a>
+            </section>
+          </template>
+          <template v-else-if="block.type === 'heading'">
             <component :is="`h${Math.min(Math.max(block.level || 2, 2), 4)}`">{{ block.text }}</component>
           </template>
           <template v-else-if="block.type === 'paragraph' || block.type === 'text'">
@@ -51,6 +59,13 @@ const { data, error } = await useFetch<{ page: any }>(
 );
 
 const page = computed(() => data.value?.page);
+
+// Only allow safe schemes for a hero CTA link (block javascript:/data: etc.).
+function ctaHref(href?: string): string | null {
+  if (!href) return null;
+  const h = href.trim();
+  return /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(h) ? h : null;
+}
 
 useHead({
   title: page.value?.seo?.title || page.value?.title || 'Page',
