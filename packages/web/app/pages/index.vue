@@ -133,8 +133,12 @@ useHead({
 }
 
 .btn-secondary {
-  background: var(--oh-secondary);
-  color: white;
+  /* Track the admin-configured secondary, but darken it enough that white text
+     clears WCAG AA (plain sage is too light at ~4.25:1). Older engines without
+     color-mix fall back to the AA-safe deep sage token. */
+  background: var(--oh-secondary-strong);
+  background: color-mix(in oklab, var(--oh-secondary) 80%, #000);
+  color: #fff;
 }
 
 .btn-outline {

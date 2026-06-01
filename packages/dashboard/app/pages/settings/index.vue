@@ -17,8 +17,8 @@ const loading = ref(true);
 const saving = ref(false);
 
 const theme = ref<ThemeSettings>({
-  primaryColor: '#3B82F6',
-  secondaryColor: '#10B981',
+  primaryColor: '#a8502f',
+  secondaryColor: '#6e8160',
   fontFamily: 'Inter, sans-serif',
   logoUrl: '',
   faviconUrl: '',
@@ -31,8 +31,8 @@ async function loadTheme() {
     const res = await api<{ theme: ThemeSettings }>('/api/theme');
     if (res.theme) {
       theme.value = {
-        primaryColor: res.theme.primaryColor || '#3B82F6',
-        secondaryColor: res.theme.secondaryColor || '#10B981',
+        primaryColor: res.theme.primaryColor || '#a8502f',
+        secondaryColor: res.theme.secondaryColor || '#6e8160',
         fontFamily: res.theme.fontFamily || 'Inter, sans-serif',
         logoUrl: res.theme.logoUrl || '',
         faviconUrl: res.theme.faviconUrl || '',

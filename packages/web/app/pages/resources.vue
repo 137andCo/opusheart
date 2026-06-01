@@ -330,8 +330,10 @@ useHead({
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: var(--oh-secondary);
-  color: white;
+  /* "Featured" reads as a gold highlight; amber + dark text clears AA (white on
+     amber would not). */
+  background: var(--oh-accent);
+  color: var(--oh-text);
 }
 
 .resource-name {

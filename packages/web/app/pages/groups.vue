@@ -260,12 +260,12 @@ useHead({
   letter-spacing: 0.025em;
 }
 
-.type-small_group { background: #d1fae5; color: #065f46; }
-.type-bible_study { background: #dbeafe; color: #1e40af; }
-.type-committee { background: #fef3c7; color: #92400e; }
-.type-ministry { background: #ede9fe; color: #5b21b6; }
-.type-team { background: #fce7f3; color: #9d174d; }
-.type-class { background: #e0e7ff; color: #3730a3; }
+.type-small_group { background: var(--oh-tag-2-bg); color: var(--oh-tag-2-fg); }
+.type-bible_study { background: var(--oh-tag-4-bg); color: var(--oh-tag-4-fg); }
+.type-committee { background: var(--oh-tag-3-bg); color: var(--oh-tag-3-fg); }
+.type-ministry { background: var(--oh-tag-5-bg); color: var(--oh-tag-5-fg); }
+.type-team { background: var(--oh-tag-6-bg); color: var(--oh-tag-6-fg); }
+.type-class { background: var(--oh-tag-1-bg); color: var(--oh-tag-1-fg); }
 .type-custom { background: var(--oh-surface); color: var(--oh-muted); }
 
 .group-name {
@@ -305,8 +305,8 @@ useHead({
 .full-badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--oh-danger-bg);
+  color: var(--oh-danger-fg);
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -317,8 +317,8 @@ useHead({
 .almost-full-badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--oh-warning-bg);
+  color: var(--oh-warning-fg);
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;

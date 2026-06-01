@@ -201,8 +201,8 @@ useHead({
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--oh-info-bg);
+  color: var(--oh-info-fg);
   text-transform: capitalize;
   margin-bottom: 0.75rem;
   align-self: flex-start;

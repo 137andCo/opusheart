@@ -1,8 +1,8 @@
 import { Theme, type IThemeDocument } from '../models/Theme.js';
 
 const DEFAULT_THEME: Record<string, unknown> = {
-  primaryColor: '#1e40af',
-  secondaryColor: '#f59e0b',
+  primaryColor: '#a8502f',
+  secondaryColor: '#6e8160',
   fontFamily: 'Inter, sans-serif',
   customCss: '',
 };

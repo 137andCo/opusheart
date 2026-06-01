@@ -107,8 +107,8 @@ async function seed(): Promise<void> {
     locale: 'en',
     timezone: 'America/New_York',
     branding: {
-      primaryColor: '#1e40af',
-      secondaryColor: '#f59e0b',
+      primaryColor: '#a8502f',
+      secondaryColor: '#6e8160',
     },
   });
   console.log('  Instance settings seeded');
@@ -171,8 +171,8 @@ async function seed(): Promise<void> {
   // Seed default theme
   await Theme.deleteMany({});
   await Theme.create({
-    primaryColor: '#1e40af',
-    secondaryColor: '#f59e0b',
+    primaryColor: '#a8502f',
+    secondaryColor: '#6e8160',
     fontFamily: 'Inter, sans-serif',
   });
   console.log('  Default theme seeded');

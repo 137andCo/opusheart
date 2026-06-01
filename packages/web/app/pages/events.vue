@@ -345,18 +345,18 @@ useHead({
 }
 
 .badge-register {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--oh-warning-bg);
+  color: var(--oh-warning-fg);
 }
 
 .badge-capacity {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--oh-info-bg);
+  color: var(--oh-info-fg);
 }
 
 .badge-recurring {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--oh-success-bg);
+  color: var(--oh-success-fg);
 }
 
 .pagination {

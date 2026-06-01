@@ -1,13 +1,40 @@
 :root {
-  --oh-primary: #4f46e5;
-  --oh-secondary: #7c3aed;
+  /* ---- Brand ----
+     --oh-primary / --oh-secondary / --oh-font are overridden at runtime by the
+     admin theme (composables/useTheme.ts -> GET /api/theme), so the church can
+     re-brand the public site from Settings. The values here are the shipped
+     default: "Sanctuary" — warm clay, sage, and amber. */
+  --oh-primary: #a8502f;          /* clay / terracotta */
+  --oh-secondary: #6e8160;        /* sage */
+  --oh-secondary-strong: #4f6b43; /* deeper sage for sage-coloured text (AA) */
+  --oh-accent: #cc9a3f;           /* amber gold */
   --oh-font: system-ui, -apple-system, sans-serif;
-  --oh-bg: #ffffff;
-  --oh-text: #1f2937;
-  --oh-muted: #6b7280;
-  --oh-border: #e5e7eb;
+
+  /* ---- Warm neutrals (tinted toward the clay hue — never pure black/white) ---- */
+  --oh-bg: #fcfaf6;        /* warm off-white page background */
+  --oh-surface: #f4efe6;   /* warm sand surface */
+  --oh-text: #2b2420;      /* warm charcoal */
+  --oh-muted: #6f6358;     /* taupe */
+  --oh-border: #e6ddce;    /* warm stone */
   --oh-radius: 0.5rem;
-  --oh-surface: #f9fafb;
+
+  /* ---- Semantic state pairs (dark foreground on a tinted background, AA) ---- */
+  --oh-success-bg: #e3eede;
+  --oh-success-fg: #3a6b46;
+  --oh-warning-bg: #f6e7cc;
+  --oh-warning-fg: #875312;
+  --oh-danger-bg: #f4dad2;
+  --oh-danger-fg: #8f3322;
+  --oh-info-bg: #d8e6e2;
+  --oh-info-fg: #235e54;
+
+  /* ---- Categorical tag pairs (warm-leaning, for group types, categories…) ---- */
+  --oh-tag-1-bg: #f0dcd3; --oh-tag-1-fg: #8f4530; /* clay */
+  --oh-tag-2-bg: #e3ead9; --oh-tag-2-fg: #4f6b43; /* sage */
+  --oh-tag-3-bg: #f4e7c9; --oh-tag-3-fg: #815c12; /* gold */
+  --oh-tag-4-bg: #d8e6e2; --oh-tag-4-fg: #235e54; /* teal */
+  --oh-tag-5-bg: #efddd9; --oh-tag-5-fg: #98463a; /* terracotta */
+  --oh-tag-6-bg: #ece4d1; --oh-tag-6-fg: #6a5c2e; /* olive */
 }
 
 *,

@@ -13,8 +13,8 @@ export interface IThemeDocument extends ITheme, Document {}
 
 const themeSchema = new Schema<IThemeDocument>(
   {
-    primaryColor: { type: String, default: '#1e40af' },
-    secondaryColor: { type: String, default: '#f59e0b' },
+    primaryColor: { type: String, default: '#a8502f' },
+    secondaryColor: { type: String, default: '#6e8160' },
     fontFamily: { type: String, default: 'Inter, sans-serif' },
     logoUrl: { type: String },
     faviconUrl: { type: String },

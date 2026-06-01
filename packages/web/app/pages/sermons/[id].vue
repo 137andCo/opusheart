@@ -196,8 +196,8 @@ watchEffect(() => {
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--oh-tag-2-bg);
+  color: var(--oh-tag-2-fg);
 }
 
 .sermon-description {
