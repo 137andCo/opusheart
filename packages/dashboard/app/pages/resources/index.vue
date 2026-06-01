@@ -221,12 +221,13 @@ onMounted(() => {
           data-key="_id"
           lazy
           paginator
+          scrollable
           striped-rows
           :rows-per-page-options="[10, 20, 50]"
           @page="onPage"
         >
           <template #empty>
-            <div class="empty-state">No resources found.</div>
+            <div class="empty-state" role="status">No resources found.</div>
           </template>
 
           <Column field="name" header="Name" />
@@ -254,9 +255,9 @@ onMounted(() => {
           <Column header="Actions" style="width: 10rem">
             <template #body="{ data }">
               <div class="action-buttons">
-                <Button icon="pi pi-pencil" text rounded severity="info" @click="openEditResource(data)" />
-                <Button icon="pi pi-check-circle" text rounded severity="success" @click="verifyResource(data)" />
-                <Button icon="pi pi-trash" text rounded severity="danger" @click="confirmDeleteResource(data)" />
+                <Button icon="pi pi-pencil" text rounded severity="info" aria-label="Edit resource" @click="openEditResource(data)" />
+                <Button icon="pi pi-check-circle" text rounded severity="success" aria-label="Verify resource" @click="verifyResource(data)" />
+                <Button icon="pi pi-trash" text rounded severity="danger" aria-label="Delete resource" @click="confirmDeleteResource(data)" />
               </div>
             </template>
           </Column>
@@ -286,12 +287,13 @@ onMounted(() => {
           data-key="_id"
           lazy
           paginator
+          scrollable
           striped-rows
           :rows-per-page-options="[10, 20, 50]"
           @page="onSubPage"
         >
           <template #empty>
-            <div class="empty-state">No submissions found.</div>
+            <div class="empty-state" role="status">No submissions found.</div>
           </template>
 
           <Column field="name" header="Name" />
@@ -326,8 +328,8 @@ onMounted(() => {
           <Column header="Actions" style="width: 8rem">
             <template #body="{ data }">
               <div v-if="data.status === 'pending'" class="action-buttons">
-                <Button icon="pi pi-check" text rounded severity="success" @click="approveSubmission(data)" />
-                <Button icon="pi pi-times" text rounded severity="danger" @click="openRejectDialog(data)" />
+                <Button icon="pi pi-check" text rounded severity="success" aria-label="Approve submission" @click="approveSubmission(data)" />
+                <Button icon="pi pi-times" text rounded severity="danger" aria-label="Reject submission" @click="openRejectDialog(data)" />
               </div>
               <span v-else class="text-muted">-</span>
             </template>
@@ -348,12 +350,12 @@ onMounted(() => {
       header="Reject Submission"
       modal
       :closable="true"
-      :style="{ width: '450px' }"
+      :style="{ width: '450px', maxWidth: '92vw' }"
     >
       <div class="dialog-form">
         <div class="field">
-          <label>Rejection Notes</label>
-          <Textarea v-model="rejectNotes" class="w-full" :rows="4" placeholder="Reason for rejection..." />
+          <label for="reject-notes">Rejection Notes</label>
+          <Textarea id="reject-notes" v-model="rejectNotes" class="w-full" :rows="4" placeholder="Reason for rejection..." />
         </div>
       </div>
       <template #footer>

@@ -1,4 +1,14 @@
 <script setup lang="ts">
+defineProps<{
+  /** Whether the off-canvas drawer is open (mobile only). */
+  open?: boolean;
+}>();
+
+const emit = defineEmits<{
+  /** Fired when a nav link is activated, so the layout can close the drawer. */
+  (e: 'navigate'): void;
+}>();
+
 const authStore = useAuthStore();
 
 interface NavItem {
@@ -49,7 +59,13 @@ const visibleNavItems = computed(() => {
 </script>
 
 <template>
-  <aside class="layout-sidebar" role="navigation" aria-label="Main navigation">
+  <aside
+    id="primary-sidebar"
+    class="layout-sidebar"
+    :class="{ open }"
+    role="navigation"
+    aria-label="Main navigation"
+  >
     <div class="sidebar-header">
       <h2>OpusHeart</h2>
     </div>
@@ -60,6 +76,7 @@ const visibleNavItems = computed(() => {
         :to="item.to"
         class="nav-item"
         active-class="nav-item-active"
+        @click="emit('navigate')"
       >
         <i :class="item.icon" aria-hidden="true" />
         <span>{{ item.label }}</span>

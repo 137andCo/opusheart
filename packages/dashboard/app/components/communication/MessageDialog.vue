@@ -37,6 +37,7 @@ const defaultForm = () => ({
 });
 
 const form = ref(defaultForm());
+const errors = reactive<Record<string, string>>({ subject: '', body: '' });
 
 const isEdit = computed(() => !!props.message);
 const dialogTitle = computed(() => (isEdit.value ? 'Edit Message' : 'New Message'));
@@ -45,6 +46,8 @@ watch(
   () => props.visible,
   (val) => {
     if (!val) return;
+    errors.subject = '';
+    errors.body = '';
     if (props.message) {
       form.value = {
         subject: props.message.subject || '',
@@ -64,15 +67,14 @@ function closeDialog() {
   emit('update:visible', false);
 }
 
+function validate(): boolean {
+  errors.subject = form.value.subject.trim() ? '' : 'Subject is required.';
+  errors.body = form.value.body.trim() ? '' : 'Message body is required.';
+  return !Object.values(errors).some(Boolean);
+}
+
 async function save() {
-  if (!form.value.subject.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Subject is required', life: 3000 });
-    return;
-  }
-  if (!form.value.body.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Message body is required', life: 3000 });
-    return;
-  }
+  if (!validate()) return;
 
   saving.value = true;
   try {
@@ -119,59 +121,68 @@ async function save() {
     :header="dialogTitle"
     modal
     :closable="true"
-    :style="{ width: '650px' }"
+    :style="{ width: '650px', maxWidth: '92vw' }"
     @update:visible="closeDialog"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label>Subject *</label>
-        <InputText v-model="form.subject" class="w-full" placeholder="Message subject" />
-      </div>
+      <FormField label="Subject" required :error="errors.subject">
+        <template #default="{ id, describedby, invalid }">
+          <InputText :id="id" v-model="form.subject" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Message subject" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Body *</label>
-        <Textarea v-model="form.body" class="w-full" :rows="5" placeholder="Message body (HTML supported)" />
-      </div>
+      <FormField label="Body" required :error="errors.body">
+        <template #default="{ id, describedby, invalid }">
+          <Textarea :id="id" v-model="form.body" class="w-full" :rows="5" :aria-describedby="describedby" :invalid="invalid" placeholder="Message body (HTML supported)" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Plain Text Body</label>
-        <Textarea v-model="form.bodyPlain" class="w-full" :rows="3" placeholder="Plain text version (auto-generated from body if empty)" />
-      </div>
+      <FormField label="Plain Text Body">
+        <template #default="{ id }">
+          <Textarea :id="id" v-model="form.bodyPlain" class="w-full" :rows="3" placeholder="Plain text version (auto-generated from body if empty)" />
+        </template>
+      </FormField>
 
       <div class="field-row">
-        <div class="field">
-          <label>Channel</label>
-          <Dropdown
-            v-model="form.channel"
-            :options="channelOptions"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-          />
-        </div>
-        <div class="field">
-          <label>Audience</label>
-          <Dropdown
-            v-model="form.audienceType"
-            :options="audienceTypeOptions"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-          />
-        </div>
+        <FormField label="Channel">
+          <template #default="{ id }">
+            <Dropdown
+              :input-id="id"
+              v-model="form.channel"
+              :options="channelOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+            />
+          </template>
+        </FormField>
+        <FormField label="Audience">
+          <template #default="{ id }">
+            <Dropdown
+              :input-id="id"
+              v-model="form.audienceType"
+              :options="audienceTypeOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+            />
+          </template>
+        </FormField>
       </div>
 
-      <div class="field">
-        <label>Schedule For</label>
-        <Calendar
-          v-model="form.scheduledFor"
-          class="w-full"
-          :show-time="true"
-          date-format="mm/dd/yy"
-          placeholder="Send immediately (leave empty)"
-          :show-button-bar="true"
-        />
-      </div>
+      <FormField label="Schedule For">
+        <template #default="{ id }">
+          <Calendar
+            :input-id="id"
+            v-model="form.scheduledFor"
+            class="w-full"
+            :show-time="true"
+            date-format="mm/dd/yy"
+            placeholder="Send immediately (leave empty)"
+            :show-button-bar="true"
+          />
+        </template>
+      </FormField>
     </div>
 
     <template #footer>
@@ -189,12 +200,6 @@ async function save() {
   flex-direction: column;
   gap: 1rem;
 }
-.field label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-}
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -208,5 +213,10 @@ async function save() {
 }
 .w-full {
   width: 100%;
+}
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -151,12 +151,13 @@ onMounted(() => {
       data-key="_id"
       lazy
       paginator
+      scrollable
       striped-rows
       :rows-per-page-options="[10, 20, 50]"
       @page="onPage"
     >
       <template #empty>
-        <div class="empty-state">No pages found.</div>
+        <div class="empty-state" role="status">No pages found.</div>
       </template>
 
       <Column field="title" header="Title" />
@@ -179,18 +180,19 @@ onMounted(() => {
       <Column header="Actions" style="width: 12rem">
         <template #body="{ data }">
           <div class="action-buttons">
-            <Button icon="pi pi-pencil" text rounded severity="info" @click="openEdit(data)" />
+            <Button icon="pi pi-pencil" text rounded severity="info" aria-label="Edit page" @click="openEdit(data)" />
             <Button
               v-if="data.status === 'draft'"
               icon="pi pi-check-circle"
               text
               rounded
               severity="success"
+              aria-label="Publish page"
               v-tooltip.top="'Publish'"
               @click="publishPage(data)"
             />
-            <Button icon="pi pi-copy" text rounded severity="secondary" v-tooltip.top="'Duplicate'" @click="duplicatePage(data)" />
-            <Button icon="pi pi-trash" text rounded severity="danger" @click="confirmDelete(data)" />
+            <Button icon="pi pi-copy" text rounded severity="secondary" aria-label="Duplicate page" v-tooltip.top="'Duplicate'" @click="duplicatePage(data)" />
+            <Button icon="pi pi-trash" text rounded severity="danger" aria-label="Delete page" @click="confirmDelete(data)" />
           </div>
         </template>
       </Column>

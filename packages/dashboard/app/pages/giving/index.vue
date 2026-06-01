@@ -182,12 +182,13 @@ onMounted(() => {
           data-key="_id"
           lazy
           paginator
+          scrollable
           striped-rows
           :rows-per-page-options="[10, 20, 50]"
           @page="onFundsPage"
         >
           <template #empty>
-            <div class="empty-state">No funds found.</div>
+            <div class="empty-state" role="status">No funds found.</div>
           </template>
 
           <Column field="name" header="Name" />
@@ -217,8 +218,8 @@ onMounted(() => {
           <Column header="Actions" style="width: 8rem">
             <template #body="{ data }">
               <div class="action-buttons">
-                <Button icon="pi pi-pencil" text rounded severity="info" @click="openEditFund(data)" />
-                <Button icon="pi pi-trash" text rounded severity="danger" @click="confirmDeleteFund(data)" />
+                <Button icon="pi pi-pencil" text rounded severity="info" aria-label="Edit fund" @click="openEditFund(data)" />
+                <Button icon="pi pi-trash" text rounded severity="danger" aria-label="Delete fund" @click="confirmDeleteFund(data)" />
               </div>
             </template>
           </Column>
@@ -273,12 +274,13 @@ onMounted(() => {
           data-key="_id"
           lazy
           paginator
+          scrollable
           striped-rows
           :rows-per-page-options="[10, 20, 50]"
           @page="onDonationsPage"
         >
           <template #empty>
-            <div class="empty-state">No donations found.</div>
+            <div class="empty-state" role="status">No donations found.</div>
           </template>
 
           <Column header="Date">
@@ -326,6 +328,7 @@ onMounted(() => {
                   text
                   rounded
                   severity="warn"
+                  aria-label="Refund donation"
                   v-tooltip.top="'Refund'"
                   @click="confirmRefund(data)"
                 />

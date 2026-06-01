@@ -45,7 +45,7 @@ onMounted(() => loadMember());
       <i class="pi pi-arrow-left" /> Back to Members
     </NuxtLink>
 
-    <div v-if="loading" class="loading-state">
+    <div v-if="loading" class="loading-state" role="status" aria-label="Loading">
       <ProgressSpinner style="width: 50px; height: 50px" />
     </div>
 

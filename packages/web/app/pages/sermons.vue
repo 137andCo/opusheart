@@ -46,6 +46,7 @@
     </div>
 
     <section v-else aria-labelledby="sermons-heading">
+      <p class="sr-only" aria-live="polite">{{ resultStatus }}</p>
       <ul class="sermon-list" role="list">
         <li v-for="sermon in sermons" :key="sermon.id" class="sermon-item">
           <article class="sermon-details">
@@ -87,7 +88,7 @@
                 target="_blank"
                 rel="noopener noreferrer"
                 class="video-link"
-                :aria-label="`Watch video for ${sermon.title}`"
+                :aria-label="`Watch video for ${sermon.title} (opens in new tab)`"
               >
                 Watch Video
               </a>
@@ -164,6 +165,12 @@ const { data, pending } = await useFetch<{
 
 const sermons = computed(() => data.value?.sermons || []);
 const totalPages = computed(() => data.value?.totalPages || 1);
+
+const resultStatus = computed(() => {
+  if (pending.value) return 'Loading…';
+  if (sermons.value.length === 0) return 'No results found.';
+  return `${sermons.value.length} result(s)`;
+});
 
 function formatDate(d: string | Date) {
   return new Date(d).toLocaleDateString('en-US', {

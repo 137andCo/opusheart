@@ -181,12 +181,13 @@ onMounted(() => {
           data-key="_id"
           lazy
           paginator
+          scrollable
           striped-rows
           :rows-per-page-options="[10, 20, 50]"
           @page="onPage"
         >
           <template #empty>
-            <div class="empty-state">No sermons found.</div>
+            <div class="empty-state" role="status">No sermons found.</div>
           </template>
 
           <Column field="title" header="Title" />
@@ -212,8 +213,8 @@ onMounted(() => {
           <Column header="Actions" style="width: 8rem">
             <template #body="{ data }">
               <div class="action-buttons">
-                <Button icon="pi pi-pencil" text rounded severity="info" @click="openEditSermon(data)" />
-                <Button icon="pi pi-trash" text rounded severity="danger" @click="confirmDeleteSermon(data)" />
+                <Button icon="pi pi-pencil" text rounded severity="info" aria-label="Edit sermon" @click="openEditSermon(data)" />
+                <Button icon="pi pi-trash" text rounded severity="danger" aria-label="Delete sermon" @click="confirmDeleteSermon(data)" />
               </div>
             </template>
           </Column>
@@ -230,10 +231,11 @@ onMounted(() => {
           :value="seriesList"
           :loading="seriesLoading"
           data-key="_id"
+          scrollable
           striped-rows
         >
           <template #empty>
-            <div class="empty-state">No series found.</div>
+            <div class="empty-state" role="status">No series found.</div>
           </template>
 
           <Column field="title" header="Title" />
@@ -251,8 +253,8 @@ onMounted(() => {
           <Column header="Actions" style="width: 8rem">
             <template #body="{ data }">
               <div class="action-buttons">
-                <Button icon="pi pi-pencil" text rounded severity="info" @click="openEditSeries(data)" />
-                <Button icon="pi pi-trash" text rounded severity="danger" @click="confirmDeleteSeries(data)" />
+                <Button icon="pi pi-pencil" text rounded severity="info" aria-label="Edit series" @click="openEditSeries(data)" />
+                <Button icon="pi pi-trash" text rounded severity="danger" aria-label="Delete series" @click="confirmDeleteSeries(data)" />
               </div>
             </template>
           </Column>

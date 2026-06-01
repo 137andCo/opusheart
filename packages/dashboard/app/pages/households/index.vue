@@ -197,10 +197,11 @@ onMounted(() => fetchAll());
       @page="onPage"
       @row-click="(e: any) => openDetail(e.data)"
       row-hover
+      scrollable
       class="cursor-pointer-rows"
     >
       <template #empty>
-        <div class="empty-state">No households found.</div>
+        <div class="empty-state" role="status">No households found.</div>
       </template>
 
       <Column field="name" header="Name" />
@@ -222,9 +223,9 @@ onMounted(() => fetchAll());
       <Column header="Actions" style="width: 10rem">
         <template #body="{ data }">
           <div class="action-buttons">
-            <Button icon="pi pi-eye" text rounded severity="info" @click.stop="openDetail(data)" />
-            <Button icon="pi pi-pencil" text rounded severity="info" @click.stop="openEdit(data)" />
-            <Button icon="pi pi-trash" text rounded severity="danger" @click.stop="confirmDelete(data)" />
+            <Button icon="pi pi-eye" text rounded severity="info" aria-label="View household details" @click.stop="openDetail(data)" />
+            <Button icon="pi pi-pencil" text rounded severity="info" aria-label="Edit household" @click.stop="openEdit(data)" />
+            <Button icon="pi pi-trash" text rounded severity="danger" aria-label="Delete household" @click.stop="confirmDelete(data)" />
           </div>
         </template>
       </Column>
@@ -271,6 +272,7 @@ onMounted(() => fetchAll());
                 rounded
                 severity="danger"
                 size="small"
+                aria-label="Remove member from household"
                 @click="removeMember(member._id || String(member))"
               />
             </div>

@@ -19,6 +19,7 @@
     </div>
 
     <section v-else aria-labelledby="events-heading">
+      <p class="sr-only" aria-live="polite">{{ resultStatus }}</p>
       <ul class="event-list" role="list">
         <li v-for="event in events" :key="event.id" class="event-item">
           <div class="event-date-badge" aria-hidden="true">
@@ -31,6 +32,7 @@
             <h2 class="event-title">{{ event.title }}</h2>
 
             <div class="event-meta">
+              <span class="sr-only">{{ fullDate(event.startDate) }}</span>
               <time :datetime="event.startDate" class="event-time">
                 {{ formatTime(event.startDate) }}
                 <template v-if="event.endDate"> &ndash; {{ formatTime(event.endDate) }}</template>
@@ -112,6 +114,12 @@ const { data, pending } = await useFetch<{
 const events = computed(() => data.value?.events || []);
 const totalPages = computed(() => data.value?.pagination?.pages || 1);
 
+const resultStatus = computed(() => {
+  if (pending.value) return 'Loading…';
+  if (events.value.length === 0) return 'No results found.';
+  return `${events.value.length} result(s)`;
+});
+
 function toDate(d: string | Date) {
   return new Date(d);
 }
@@ -132,6 +140,15 @@ function formatTime(d: string | Date) {
   return toDate(d).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
+  });
+}
+
+function fullDate(d: string | Date) {
+  return toDate(d).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
   });
 }
 

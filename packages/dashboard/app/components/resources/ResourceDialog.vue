@@ -63,13 +63,30 @@ const defaultForm = () => ({
 
 const form = ref(defaultForm());
 
+const errors = reactive<Record<string, string>>({
+  name: '',
+  category: '',
+  provider: '',
+  eligibility: '',
+  hours: '',
+});
+
 const isEdit = computed(() => !!props.resource);
 const dialogTitle = computed(() => (isEdit.value ? 'Edit Resource' : 'New Resource'));
+
+function resetErrors() {
+  errors.name = '';
+  errors.category = '';
+  errors.provider = '';
+  errors.eligibility = '';
+  errors.hours = '';
+}
 
 watch(
   () => props.visible,
   (val) => {
     if (!val) return;
+    resetErrors();
     if (props.resource) {
       const r = props.resource;
       form.value = {
@@ -108,27 +125,17 @@ function closeDialog() {
   emit('update:visible', false);
 }
 
+function validate(): boolean {
+  errors.name = form.value.name.trim() ? '' : 'Name is required.';
+  errors.category = form.value.category ? '' : 'Category is required.';
+  errors.provider = form.value.provider.trim() ? '' : 'Provider is required.';
+  errors.eligibility = form.value.eligibility.trim() ? '' : 'Eligibility is required.';
+  errors.hours = form.value.hours.trim() ? '' : 'Hours are required.';
+  return !Object.values(errors).some(Boolean);
+}
+
 async function save() {
-  if (!form.value.name.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Name is required', life: 3000 });
-    return;
-  }
-  if (!form.value.category) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Category is required', life: 3000 });
-    return;
-  }
-  if (!form.value.provider.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Provider is required', life: 3000 });
-    return;
-  }
-  if (!form.value.eligibility.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Eligibility is required', life: 3000 });
-    return;
-  }
-  if (!form.value.hours.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Hours are required', life: 3000 });
-    return;
-  }
+  if (!validate()) return;
 
   saving.value = true;
   try {
@@ -194,123 +201,146 @@ async function save() {
     :header="dialogTitle"
     modal
     :closable="true"
-    :style="{ width: '750px' }"
+    :style="{ width: '750px', maxWidth: '92vw' }"
     @update:visible="closeDialog"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label>Name *</label>
-        <InputText v-model="form.name" class="w-full" placeholder="Resource name" />
-      </div>
+      <FormField label="Name" required :error="errors.name">
+        <template #default="{ id, describedby, invalid }">
+          <InputText :id="id" v-model="form.name" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Resource name" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Description</label>
-        <Textarea v-model="form.description" class="w-full" :rows="3" placeholder="Resource description" />
+      <FormField label="Description">
+        <template #default="{ id }">
+          <Textarea :id="id" v-model="form.description" class="w-full" :rows="3" placeholder="Resource description" />
+        </template>
+      </FormField>
+
+      <div class="field-row">
+        <FormField label="Category" required :error="errors.category">
+          <template #default="{ id, describedby, invalid }">
+            <Dropdown
+              :input-id="id"
+              v-model="form.category"
+              :options="categoryOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+              :aria-describedby="describedby"
+              :invalid="invalid"
+              placeholder="Select category"
+            />
+          </template>
+        </FormField>
+        <FormField label="Subcategory">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.subcategory" class="w-full" placeholder="Subcategory" />
+          </template>
+        </FormField>
       </div>
 
       <div class="field-row">
-        <div class="field">
-          <label>Category *</label>
-          <Dropdown
-            v-model="form.category"
-            :options="categoryOptions"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-            placeholder="Select category"
-          />
-        </div>
-        <div class="field">
-          <label>Subcategory</label>
-          <InputText v-model="form.subcategory" class="w-full" placeholder="Subcategory" />
-        </div>
+        <FormField label="Provider" required :error="errors.provider">
+          <template #default="{ id, describedby, invalid }">
+            <InputText :id="id" v-model="form.provider" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Organization or provider" />
+          </template>
+        </FormField>
+        <FormField label="Eligibility" required :error="errors.eligibility">
+          <template #default="{ id, describedby, invalid }">
+            <InputText :id="id" v-model="form.eligibility" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Who is eligible" />
+          </template>
+        </FormField>
       </div>
+
+      <FormField label="Hours" required :error="errors.hours">
+        <template #default="{ id, describedby, invalid }">
+          <InputText :id="id" v-model="form.hours" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="e.g., Mon-Fri 9am-5pm" />
+        </template>
+      </FormField>
 
       <div class="field-row">
-        <div class="field">
-          <label>Provider *</label>
-          <InputText v-model="form.provider" class="w-full" placeholder="Organization or provider" />
-        </div>
-        <div class="field">
-          <label>Eligibility *</label>
-          <InputText v-model="form.eligibility" class="w-full" placeholder="Who is eligible" />
-        </div>
+        <FormField label="Phone">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.phone" class="w-full" placeholder="Phone number" />
+          </template>
+        </FormField>
+        <FormField label="Email">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.email" class="w-full" placeholder="Contact email" />
+          </template>
+        </FormField>
       </div>
 
-      <div class="field">
-        <label>Hours *</label>
-        <InputText v-model="form.hours" class="w-full" placeholder="e.g., Mon-Fri 9am-5pm" />
-      </div>
-
-      <div class="field-row">
-        <div class="field">
-          <label>Phone</label>
-          <InputText v-model="form.phone" class="w-full" placeholder="Phone number" />
-        </div>
-        <div class="field">
-          <label>Email</label>
-          <InputText v-model="form.email" class="w-full" placeholder="Contact email" />
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Website</label>
-        <InputText v-model="form.website" class="w-full" placeholder="https://..." />
-      </div>
+      <FormField label="Website">
+        <template #default="{ id }">
+          <InputText :id="id" v-model="form.website" class="w-full" placeholder="https://..." />
+        </template>
+      </FormField>
 
       <div class="section-label">Address</div>
-      <div class="field">
-        <label>Street</label>
-        <InputText v-model="form.address.street" class="w-full" placeholder="Street address" />
+      <FormField label="Street">
+        <template #default="{ id }">
+          <InputText :id="id" v-model="form.address.street" class="w-full" placeholder="Street address" />
+        </template>
+      </FormField>
+      <div class="field-row">
+        <FormField label="City">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.address.city" class="w-full" placeholder="City" />
+          </template>
+        </FormField>
+        <FormField label="State">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.address.state" class="w-full" placeholder="State" />
+          </template>
+        </FormField>
       </div>
       <div class="field-row">
-        <div class="field">
-          <label>City</label>
-          <InputText v-model="form.address.city" class="w-full" placeholder="City" />
-        </div>
-        <div class="field">
-          <label>State</label>
-          <InputText v-model="form.address.state" class="w-full" placeholder="State" />
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>ZIP</label>
-          <InputText v-model="form.address.zip" class="w-full" placeholder="ZIP code" />
-        </div>
-        <div class="field">
-          <label>Country</label>
-          <InputText v-model="form.address.country" class="w-full" placeholder="Country" />
-        </div>
+        <FormField label="ZIP">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.address.zip" class="w-full" placeholder="ZIP code" />
+          </template>
+        </FormField>
+        <FormField label="Country">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.address.country" class="w-full" placeholder="Country" />
+          </template>
+        </FormField>
       </div>
 
       <div class="section-label">Location (optional)</div>
       <div class="field-row">
-        <div class="field">
-          <label>Latitude</label>
-          <InputNumber v-model="form.location.lat" class="w-full" :min-fraction-digits="1" :max-fraction-digits="8" placeholder="Latitude" />
-        </div>
-        <div class="field">
-          <label>Longitude</label>
-          <InputNumber v-model="form.location.lng" class="w-full" :min-fraction-digits="1" :max-fraction-digits="8" placeholder="Longitude" />
-        </div>
+        <FormField label="Latitude">
+          <template #default="{ id }">
+            <InputNumber :input-id="id" v-model="form.location.lat" class="w-full" :min-fraction-digits="1" :max-fraction-digits="8" placeholder="Latitude" />
+          </template>
+        </FormField>
+        <FormField label="Longitude">
+          <template #default="{ id }">
+            <InputNumber :input-id="id" v-model="form.location.lng" class="w-full" :min-fraction-digits="1" :max-fraction-digits="8" placeholder="Longitude" />
+          </template>
+        </FormField>
       </div>
 
       <div class="field-row">
-        <div class="field">
-          <label>Languages</label>
-          <InputText v-model="form.languages" class="w-full" placeholder="Comma-separated, e.g., English, Spanish" />
-        </div>
-        <div class="field">
-          <label>Tags</label>
-          <InputText v-model="form.tags" class="w-full" placeholder="Comma-separated tags" />
-        </div>
+        <FormField label="Languages">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.languages" class="w-full" placeholder="Comma-separated, e.g., English, Spanish" />
+          </template>
+        </FormField>
+        <FormField label="Tags">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.tags" class="w-full" placeholder="Comma-separated tags" />
+          </template>
+        </FormField>
       </div>
 
-      <div class="field-checkbox">
-        <InputSwitch v-model="form.featured" />
-        <label>Featured</label>
-      </div>
+      <FormField label="Featured">
+        <template #default="{ id }">
+          <InputSwitch :input-id="id" v-model="form.featured" />
+        </template>
+      </FormField>
     </div>
 
     <template #footer>
@@ -328,25 +358,10 @@ async function save() {
   flex-direction: column;
   gap: 1rem;
 }
-.field label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-}
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-}
-.field-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.field-checkbox label {
-  font-weight: 500;
-  font-size: 0.875rem;
 }
 .section-label {
   font-weight: 600;
@@ -362,5 +377,10 @@ async function save() {
 }
 .w-full {
   width: 100%;
+}
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

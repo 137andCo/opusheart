@@ -13,6 +13,7 @@ const api = useApi();
 const toast = useToast();
 
 const saving = ref(false);
+const errors = reactive<Record<string, string>>({ name: '' });
 const form = ref({
   name: '',
   address: {
@@ -26,6 +27,7 @@ const form = ref({
 
 watch(() => props.visible, (val) => {
   if (val) {
+    errors.name = '';
     if (props.household) {
       form.value = {
         name: props.household.name || '',
@@ -61,11 +63,13 @@ function buildBody() {
   return body;
 }
 
+function validate(): boolean {
+  errors.name = form.value.name.trim() ? '' : 'Name is required.';
+  return !Object.values(errors).some(Boolean);
+}
+
 async function save() {
-  if (!form.value.name.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Name is required', life: 3000 });
-    return;
-  }
+  if (!validate()) return;
   saving.value = true;
   try {
     const body = buildBody();
@@ -96,39 +100,45 @@ function close() {
     @update:visible="close"
     :header="dialogTitle"
     modal
-    :style="{ width: '32rem' }"
+    :style="{ width: '32rem', maxWidth: '92vw' }"
     :closable="true"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label>Name *</label>
-        <InputText v-model="form.name" class="w-full" placeholder="Household name" />
-      </div>
+      <FormField label="Name" required :error="errors.name">
+        <template #default="{ id, describedby, invalid }">
+          <InputText :id="id" v-model="form.name" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Household name" />
+        </template>
+      </FormField>
 
       <Divider align="left"><span class="divider-text">Address (optional)</span></Divider>
 
-      <div class="field">
-        <label>Street</label>
-        <InputText v-model="form.address.street" class="w-full" placeholder="Street address" />
-      </div>
+      <FormField label="Street">
+        <template #default="{ id }">
+          <InputText :id="id" v-model="form.address.street" class="w-full" placeholder="Street address" />
+        </template>
+      </FormField>
       <div class="field-row">
-        <div class="field flex-1">
-          <label>City</label>
-          <InputText v-model="form.address.city" class="w-full" />
-        </div>
-        <div class="field" style="width: 6rem">
-          <label>State</label>
-          <InputText v-model="form.address.state" class="w-full" />
-        </div>
-        <div class="field" style="width: 7rem">
-          <label>ZIP</label>
-          <InputText v-model="form.address.zip" class="w-full" />
-        </div>
+        <FormField label="City" class="flex-1">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.address.city" class="w-full" />
+          </template>
+        </FormField>
+        <FormField label="State" style="width: 6rem">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.address.state" class="w-full" />
+          </template>
+        </FormField>
+        <FormField label="ZIP" style="width: 7rem">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.address.zip" class="w-full" />
+          </template>
+        </FormField>
       </div>
-      <div class="field">
-        <label>Country</label>
-        <InputText v-model="form.address.country" class="w-full" placeholder="Country" />
-      </div>
+      <FormField label="Country">
+        <template #default="{ id }">
+          <InputText :id="id" v-model="form.address.country" class="w-full" placeholder="Country" />
+        </template>
+      </FormField>
     </div>
 
     <template #footer>
@@ -144,17 +154,9 @@ function close() {
   flex-direction: column;
   gap: 0.75rem;
 }
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.field label {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
 .field-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 .flex-1 {

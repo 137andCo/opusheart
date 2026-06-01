@@ -32,6 +32,11 @@ const defaultForm = () => ({
 
 const form = ref(defaultForm());
 
+const errors = reactive<Record<string, string>>({
+  title: '',
+  speaker: '',
+});
+
 const isEdit = computed(() => !!props.sermon);
 const dialogTitle = computed(() => (isEdit.value ? 'Edit Sermon' : 'New Sermon'));
 
@@ -40,10 +45,16 @@ const seriesOptions = computed(() => [
   ...props.seriesList.map((s: any) => ({ label: s.title, value: s._id || s.id })),
 ]);
 
+function resetErrors() {
+  errors.title = '';
+  errors.speaker = '';
+}
+
 watch(
   () => props.visible,
   (val) => {
     if (!val) return;
+    resetErrors();
     if (props.sermon) {
       const s = props.sermon;
       form.value = {
@@ -71,15 +82,14 @@ function closeDialog() {
   emit('update:visible', false);
 }
 
+function validate(): boolean {
+  errors.title = form.value.title.trim() ? '' : 'Title is required.';
+  errors.speaker = form.value.speaker.trim() ? '' : 'Speaker is required.';
+  return !Object.values(errors).some(Boolean);
+}
+
 async function save() {
-  if (!form.value.title.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Title is required', life: 3000 });
-    return;
-  }
-  if (!form.value.speaker.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Speaker is required', life: 3000 });
-    return;
-  }
+  if (!validate()) return;
 
   saving.value = true;
   try {
@@ -137,83 +147,95 @@ async function save() {
     :header="dialogTitle"
     modal
     :closable="true"
-    :style="{ width: '700px' }"
+    :style="{ width: '700px', maxWidth: '92vw' }"
     @update:visible="closeDialog"
   >
     <div class="dialog-form">
       <div class="field-row">
-        <div class="field">
-          <label>Title *</label>
-          <InputText v-model="form.title" class="w-full" placeholder="Sermon title" />
-        </div>
-        <div class="field">
-          <label>Speaker *</label>
-          <InputText v-model="form.speaker" class="w-full" placeholder="Speaker name" />
-        </div>
+        <FormField label="Title" required :error="errors.title">
+          <template #default="{ id, describedby, invalid }">
+            <InputText :id="id" v-model="form.title" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Sermon title" />
+          </template>
+        </FormField>
+        <FormField label="Speaker" required :error="errors.speaker">
+          <template #default="{ id, describedby, invalid }">
+            <InputText :id="id" v-model="form.speaker" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Speaker name" />
+          </template>
+        </FormField>
       </div>
 
       <div class="field-row">
-        <div class="field">
-          <label>Date</label>
-          <Calendar
-            v-model="form.date"
-            class="w-full"
-            date-format="mm/dd/yy"
-            placeholder="Sermon date"
-          />
-        </div>
-        <div class="field">
-          <label>Series</label>
-          <Dropdown
-            v-model="form.series"
-            :options="seriesOptions"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-            placeholder="Select series"
-          />
-        </div>
+        <FormField label="Date">
+          <template #default="{ id }">
+            <Calendar
+              :input-id="id"
+              v-model="form.date"
+              class="w-full"
+              date-format="mm/dd/yy"
+              placeholder="Sermon date"
+            />
+          </template>
+        </FormField>
+        <FormField label="Series">
+          <template #default="{ id }">
+            <Dropdown
+              :input-id="id"
+              v-model="form.series"
+              :options="seriesOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+              placeholder="Select series"
+            />
+          </template>
+        </FormField>
       </div>
 
-      <div class="field">
-        <label>Description</label>
-        <Textarea v-model="form.description" class="w-full" :rows="3" placeholder="Sermon description" />
-      </div>
+      <FormField label="Description">
+        <template #default="{ id }">
+          <Textarea :id="id" v-model="form.description" class="w-full" :rows="3" placeholder="Sermon description" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Scripture References</label>
-        <Chips v-model="form.scriptureReferences" class="w-full" placeholder="e.g. John 3:16" />
-      </div>
+      <FormField label="Scripture References" hint="Press Enter after each reference to add it.">
+        <template #default="{ id, describedby }">
+          <Chips :input-id="id" v-model="form.scriptureReferences" class="w-full" :aria-describedby="describedby" placeholder="e.g. John 3:16" />
+        </template>
+      </FormField>
 
       <div class="field-row">
-        <div class="field">
-          <label>Audio URL</label>
-          <InputText v-model="form.audioUrl" class="w-full" placeholder="https://..." />
-        </div>
-        <div class="field">
-          <label>Video URL</label>
-          <InputText v-model="form.videoUrl" class="w-full" placeholder="https://..." />
-        </div>
+        <FormField label="Audio URL">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.audioUrl" class="w-full" placeholder="https://..." />
+          </template>
+        </FormField>
+        <FormField label="Video URL">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.videoUrl" class="w-full" placeholder="https://..." />
+          </template>
+        </FormField>
       </div>
 
-      <div class="field">
-        <label>Notes</label>
-        <Textarea v-model="form.notes" class="w-full" :rows="4" placeholder="Sermon notes" />
-      </div>
+      <FormField label="Notes">
+        <template #default="{ id }">
+          <Textarea :id="id" v-model="form.notes" class="w-full" :rows="4" placeholder="Sermon notes" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Tags</label>
-        <Chips v-model="form.tags" class="w-full" placeholder="Add tags" />
-      </div>
+      <FormField label="Tags" hint="Press Enter after each tag to add it.">
+        <template #default="{ id, describedby }">
+          <Chips :input-id="id" v-model="form.tags" class="w-full" :aria-describedby="describedby" placeholder="Add tags" />
+        </template>
+      </FormField>
 
       <div class="field-row-switches">
         <div class="field-checkbox">
-          <InputSwitch v-model="form.published" />
-          <label>Published</label>
+          <InputSwitch input-id="sermon-published" v-model="form.published" />
+          <label for="sermon-published">Published</label>
         </div>
         <div class="field-checkbox">
-          <InputSwitch v-model="form.podcastInclude" />
-          <label>Include in Podcast</label>
+          <InputSwitch input-id="sermon-podcast" v-model="form.podcastInclude" />
+          <label for="sermon-podcast">Include in Podcast</label>
         </div>
       </div>
     </div>
@@ -232,12 +254,6 @@ async function save() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-.field label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
 }
 .field-row {
   display: grid;
@@ -265,5 +281,10 @@ async function save() {
 }
 .w-full {
   width: 100%;
+}
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

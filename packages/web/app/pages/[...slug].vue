@@ -13,7 +13,7 @@
         <h1 class="page-title">{{ page.title }}</h1>
         <div v-for="(block, i) in page.content" :key="i" class="content-block">
           <template v-if="block.type === 'heading'">
-            <component :is="'h' + (block.level || 2)">{{ block.text }}</component>
+            <component :is="`h${Math.min(Math.max(block.level || 2, 2), 4)}`">{{ block.text }}</component>
           </template>
           <template v-else-if="block.type === 'paragraph' || block.type === 'text'">
             <p v-html="block.text" />

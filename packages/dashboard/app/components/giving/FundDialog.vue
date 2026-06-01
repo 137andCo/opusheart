@@ -21,6 +21,7 @@ const defaultForm = () => ({
 });
 
 const form = ref(defaultForm());
+const errors = reactive<Record<string, string>>({ name: '' });
 
 const isEdit = computed(() => !!props.fund);
 const dialogTitle = computed(() => (isEdit.value ? 'Edit Fund' : 'New Fund'));
@@ -29,6 +30,7 @@ watch(
   () => props.visible,
   (val) => {
     if (!val) return;
+    errors.name = '';
     if (props.fund) {
       const f = props.fund;
       form.value = {
@@ -47,11 +49,13 @@ function closeDialog() {
   emit('update:visible', false);
 }
 
+function validate(): boolean {
+  errors.name = form.value.name.trim() ? '' : 'Fund name is required.';
+  return !Object.values(errors).some(Boolean);
+}
+
 async function save() {
-  if (!form.value.name.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Fund name is required', life: 3000 });
-    return;
-  }
+  if (!validate()) return;
 
   saving.value = true;
   try {
@@ -96,28 +100,31 @@ async function save() {
     :header="dialogTitle"
     modal
     :closable="true"
-    :style="{ width: '550px' }"
+    :style="{ width: '550px', maxWidth: '92vw' }"
     @update:visible="closeDialog"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label>Name *</label>
-        <InputText v-model="form.name" class="w-full" placeholder="Fund name" />
-      </div>
+      <FormField label="Name" required :error="errors.name">
+        <template #default="{ id, describedby, invalid }">
+          <InputText :id="id" v-model="form.name" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Fund name" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Description</label>
-        <Textarea v-model="form.description" class="w-full" :rows="3" placeholder="Fund description" />
-      </div>
+      <FormField label="Description">
+        <template #default="{ id }">
+          <Textarea :id="id" v-model="form.description" class="w-full" :rows="3" placeholder="Fund description" />
+        </template>
+      </FormField>
 
       <div class="field-row">
-        <div class="field">
-          <label>Goal ($)</label>
-          <InputNumber v-model="form.goal" class="w-full" mode="currency" currency="USD" locale="en-US" placeholder="0.00" />
-        </div>
+        <FormField label="Goal ($)">
+          <template #default="{ id }">
+            <InputNumber :input-id="id" v-model="form.goal" class="w-full" mode="currency" currency="USD" locale="en-US" placeholder="0.00" />
+          </template>
+        </FormField>
         <div class="field field-switch">
-          <label>Active</label>
-          <InputSwitch v-model="form.active" />
+          <label for="fund-active">Active</label>
+          <InputSwitch input-id="fund-active" v-model="form.active" />
         </div>
       </div>
     </div>
@@ -161,5 +168,10 @@ async function save() {
 }
 .w-full {
   width: 100%;
+}
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -22,6 +22,7 @@ const defaultForm = () => ({
 });
 
 const form = ref(defaultForm());
+const errors = reactive<Record<string, string>>({ title: '' });
 
 const isEdit = computed(() => !!props.series);
 const dialogTitle = computed(() => (isEdit.value ? 'Edit Series' : 'New Series'));
@@ -30,6 +31,7 @@ watch(
   () => props.visible,
   (val) => {
     if (!val) return;
+    errors.title = '';
     if (props.series) {
       const s = props.series;
       form.value = {
@@ -49,11 +51,13 @@ function closeDialog() {
   emit('update:visible', false);
 }
 
+function validate(): boolean {
+  errors.title = form.value.title.trim() ? '' : 'Title is required.';
+  return !Object.values(errors).some(Boolean);
+}
+
 async function save() {
-  if (!form.value.title.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Title is required', life: 3000 });
-    return;
-  }
+  if (!validate()) return;
 
   saving.value = true;
   try {
@@ -101,44 +105,51 @@ async function save() {
     :header="dialogTitle"
     modal
     :closable="true"
-    :style="{ width: '500px' }"
+    :style="{ width: '500px', maxWidth: '92vw' }"
     @update:visible="closeDialog"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label>Title *</label>
-        <InputText v-model="form.title" class="w-full" placeholder="Series title" />
-      </div>
+      <FormField label="Title" required :error="errors.title">
+        <template #default="{ id, describedby, invalid }">
+          <InputText :id="id" v-model="form.title" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Series title" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Description</label>
-        <Textarea v-model="form.description" class="w-full" :rows="3" placeholder="Series description" />
-      </div>
+      <FormField label="Description">
+        <template #default="{ id }">
+          <Textarea :id="id" v-model="form.description" class="w-full" :rows="3" placeholder="Series description" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Image URL</label>
-        <InputText v-model="form.imageUrl" class="w-full" placeholder="https://..." />
-      </div>
+      <FormField label="Image URL">
+        <template #default="{ id }">
+          <InputText :id="id" v-model="form.imageUrl" class="w-full" placeholder="https://..." />
+        </template>
+      </FormField>
 
       <div class="field-row">
-        <div class="field">
-          <label>Start Date</label>
-          <Calendar
-            v-model="form.startDate"
-            class="w-full"
-            date-format="mm/dd/yy"
-            placeholder="Start date"
-          />
-        </div>
-        <div class="field">
-          <label>End Date</label>
-          <Calendar
-            v-model="form.endDate"
-            class="w-full"
-            date-format="mm/dd/yy"
-            placeholder="End date"
-          />
-        </div>
+        <FormField label="Start Date">
+          <template #default="{ id }">
+            <Calendar
+              :input-id="id"
+              v-model="form.startDate"
+              class="w-full"
+              date-format="mm/dd/yy"
+              placeholder="Start date"
+            />
+          </template>
+        </FormField>
+        <FormField label="End Date">
+          <template #default="{ id }">
+            <Calendar
+              :input-id="id"
+              v-model="form.endDate"
+              class="w-full"
+              date-format="mm/dd/yy"
+              placeholder="End date"
+            />
+          </template>
+        </FormField>
       </div>
     </div>
 
@@ -157,12 +168,6 @@ async function save() {
   flex-direction: column;
   gap: 1rem;
 }
-.field label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-}
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -176,5 +181,10 @@ async function save() {
 }
 .w-full {
   width: 100%;
+}
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -84,16 +84,16 @@ onMounted(loadTheme);
           <div class="form-field">
             <label for="primaryColor">Primary Color</label>
             <div style="display: flex; gap: 0.5rem; align-items: center">
-              <input id="primaryColor" v-model="theme.primaryColor" type="color" style="width: 40px; height: 36px; border: none; cursor: pointer" />
-              <InputText v-model="theme.primaryColor" style="flex: 1" />
+              <input id="primaryColor" v-model="theme.primaryColor" type="color" style="width: 44px; height: 44px; border: none; cursor: pointer" />
+              <InputText v-model="theme.primaryColor" aria-label="Primary color hex value" style="flex: 1" />
             </div>
           </div>
 
           <div class="form-field">
             <label for="secondaryColor">Secondary Color</label>
             <div style="display: flex; gap: 0.5rem; align-items: center">
-              <input id="secondaryColor" v-model="theme.secondaryColor" type="color" style="width: 40px; height: 36px; border: none; cursor: pointer" />
-              <InputText v-model="theme.secondaryColor" style="flex: 1" />
+              <input id="secondaryColor" v-model="theme.secondaryColor" type="color" style="width: 44px; height: 44px; border: none; cursor: pointer" />
+              <InputText v-model="theme.secondaryColor" aria-label="Secondary color hex value" style="flex: 1" />
             </div>
           </div>
 
@@ -141,6 +141,11 @@ onMounted(loadTheme);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .form-field {
   display: flex;

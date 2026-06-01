@@ -74,71 +74,76 @@ function close() {
     header="New Booking"
     :modal="true"
     :closable="true"
-    :style="{ width: '500px' }"
+    :style="{ width: '500px', maxWidth: '92vw' }"
     @update:visible="close"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label for="booking-title">Title *</label>
-        <InputText
-          id="booking-title"
-          v-model="form.title"
-          class="w-full"
-          placeholder="Booking title"
-        />
-      </div>
+      <FormField label="Title" required>
+        <template #default="{ id }">
+          <InputText
+            :id="id"
+            v-model="form.title"
+            class="w-full"
+            placeholder="Booking title"
+          />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label for="booking-resource">Resource *</label>
-        <Dropdown
-          id="booking-resource"
-          v-model="form.resource"
-          :options="resourceOptions"
-          option-label="label"
-          option-value="value"
-          placeholder="Select a resource"
-          class="w-full"
-        />
-      </div>
+      <FormField label="Resource" required>
+        <template #default="{ id }">
+          <Dropdown
+            :input-id="id"
+            v-model="form.resource"
+            :options="resourceOptions"
+            option-label="label"
+            option-value="value"
+            placeholder="Select a resource"
+            class="w-full"
+          />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label for="booking-start">Start Time *</label>
-        <Calendar
-          id="booking-start"
-          v-model="form.startTime"
-          class="w-full"
-          date-format="mm/dd/yy"
-          :show-time="true"
-          :show-icon="true"
-          placeholder="Select start date/time"
-          hour-format="12"
-        />
-      </div>
+      <FormField label="Start Time" required>
+        <template #default="{ id }">
+          <Calendar
+            :input-id="id"
+            v-model="form.startTime"
+            class="w-full"
+            date-format="mm/dd/yy"
+            :show-time="true"
+            :show-icon="true"
+            placeholder="Select start date/time"
+            hour-format="12"
+          />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label for="booking-end">End Time *</label>
-        <Calendar
-          id="booking-end"
-          v-model="form.endTime"
-          class="w-full"
-          date-format="mm/dd/yy"
-          :show-time="true"
-          :show-icon="true"
-          placeholder="Select end date/time"
-          hour-format="12"
-        />
-      </div>
+      <FormField label="End Time" required>
+        <template #default="{ id }">
+          <Calendar
+            :input-id="id"
+            v-model="form.endTime"
+            class="w-full"
+            date-format="mm/dd/yy"
+            :show-time="true"
+            :show-icon="true"
+            placeholder="Select end date/time"
+            hour-format="12"
+          />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label for="booking-notes">Notes</label>
-        <Textarea
-          id="booking-notes"
-          v-model="form.notes"
-          class="w-full"
-          rows="3"
-          placeholder="Optional notes"
-        />
-      </div>
+      <FormField label="Notes">
+        <template #default="{ id }">
+          <Textarea
+            :id="id"
+            v-model="form.notes"
+            class="w-full"
+            rows="3"
+            placeholder="Optional notes"
+          />
+        </template>
+      </FormField>
     </div>
 
     <template #footer>
@@ -153,15 +158,6 @@ function close() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.field label {
-  font-weight: 600;
-  font-size: 0.875rem;
 }
 .w-full {
   width: 100%;

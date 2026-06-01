@@ -9,6 +9,14 @@ export default defineNuxtConfig({
     options: {
       theme: {
         preset: Aura,
+        options: {
+          // Opt-in dark mode only. Aura's default darkModeSelector is `system`,
+          // which silently activates an undesigned/untested dark palette for any
+          // visitor whose OS prefers dark. Pin it to a class that is never applied
+          // until dark mode is actually designed, so the dashboard stays in its
+          // intended (and tested) light theme.
+          darkModeSelector: '.app-dark',
+        },
       },
     },
   },

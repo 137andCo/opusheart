@@ -31,13 +31,14 @@
     </div>
 
     <section v-else aria-labelledby="prayer-heading">
+      <p class="sr-only" aria-live="polite">{{ resultStatus }}</p>
       <ul class="prayer-grid" role="list">
         <li v-for="request in requests" :key="request.id" class="prayer-card">
           <article>
             <span v-if="request.category" class="category-badge">{{ request.category }}</span>
             <p class="prayer-content">{{ request.content }}</p>
             <div class="prayer-meta">
-              <span class="prayer-count" aria-label="Number of prayers">
+              <span class="prayer-count">
                 <span class="pray-icon" aria-hidden="true">&#x1F64F;</span>
                 {{ request.prayerCount || 0 }} {{ request.prayerCount === 1 ? 'prayer' : 'prayers' }}
               </span>
@@ -102,6 +103,12 @@ const { data, pending } = await useFetch<{
 
 const requests = computed(() => data.value?.requests || []);
 const totalPages = computed(() => data.value?.totalPages || 1);
+
+const resultStatus = computed(() => {
+  if (pending.value) return 'Loading…';
+  if (requests.value.length === 0) return 'No results found.';
+  return `${requests.value.length} result(s)`;
+});
 
 useHead({
   title: 'Prayer Wall',

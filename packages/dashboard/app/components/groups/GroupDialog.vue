@@ -25,6 +25,7 @@ const defaultForm = () => ({
 });
 
 const form = ref(defaultForm());
+const errors = reactive<Record<string, string>>({ name: '' });
 
 const typeOptions = [
   { label: 'Small Group', value: 'small_group' },
@@ -49,6 +50,7 @@ watch(
   () => props.visible,
   (val) => {
     if (!val) return;
+    errors.name = '';
     if (props.group) {
       form.value = {
         name: props.group.name || '',
@@ -70,11 +72,13 @@ function closeDialog() {
   emit('update:visible', false);
 }
 
+function validate(): boolean {
+  errors.name = form.value.name.trim() ? '' : 'Name is required.';
+  return !Object.values(errors).some(Boolean);
+}
+
 async function save() {
-  if (!form.value.name.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Name is required', life: 3000 });
-    return;
-  }
+  if (!validate()) return;
 
   saving.value = true;
   try {
@@ -121,61 +125,70 @@ async function save() {
     :header="dialogTitle"
     modal
     :closable="true"
-    :style="{ width: '550px' }"
+    :style="{ width: '550px', maxWidth: '92vw' }"
     @update:visible="closeDialog"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label>Name *</label>
-        <InputText v-model="form.name" class="w-full" placeholder="Group name" />
-      </div>
+      <FormField label="Name" required :error="errors.name">
+        <template #default="{ id, describedby, invalid }">
+          <InputText :id="id" v-model="form.name" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Group name" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Description</label>
-        <Textarea v-model="form.description" class="w-full" :rows="3" placeholder="Group description" />
-      </div>
+      <FormField label="Description">
+        <template #default="{ id }">
+          <Textarea :id="id" v-model="form.description" class="w-full" :rows="3" placeholder="Group description" />
+        </template>
+      </FormField>
 
       <div class="field-row">
-        <div class="field">
-          <label>Type</label>
-          <Dropdown
-            v-model="form.type"
-            :options="typeOptions"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-          />
-        </div>
-        <div class="field">
-          <label>Visibility</label>
-          <Dropdown
-            v-model="form.visibility"
-            :options="visibilityOptions"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-          />
-        </div>
+        <FormField label="Type">
+          <template #default="{ id }">
+            <Dropdown
+              :input-id="id"
+              v-model="form.type"
+              :options="typeOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+            />
+          </template>
+        </FormField>
+        <FormField label="Visibility">
+          <template #default="{ id }">
+            <Dropdown
+              :input-id="id"
+              v-model="form.visibility"
+              :options="visibilityOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+            />
+          </template>
+        </FormField>
       </div>
 
-      <div class="field">
-        <label>Meeting Schedule</label>
-        <InputText v-model="form.meetingSchedule" class="w-full" placeholder="e.g. Tuesdays 7:00 PM" />
-      </div>
+      <FormField label="Meeting Schedule">
+        <template #default="{ id }">
+          <InputText :id="id" v-model="form.meetingSchedule" class="w-full" placeholder="e.g. Tuesdays 7:00 PM" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Location</label>
-        <InputText v-model="form.location" class="w-full" placeholder="Meeting location" />
-      </div>
+      <FormField label="Location">
+        <template #default="{ id }">
+          <InputText :id="id" v-model="form.location" class="w-full" placeholder="Meeting location" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Max Members</label>
-        <InputNumber v-model="form.maxMembers" class="w-full" :min="2" placeholder="Unlimited" />
-      </div>
+      <FormField label="Max Members">
+        <template #default="{ id }">
+          <InputNumber :input-id="id" v-model="form.maxMembers" class="w-full" :min="2" placeholder="Unlimited" />
+        </template>
+      </FormField>
 
       <div v-if="isEdit" class="field-checkbox">
-        <InputSwitch v-model="form.active" />
-        <label>Active</label>
+        <InputSwitch input-id="group-active" v-model="form.active" />
+        <label for="group-active">Active</label>
       </div>
     </div>
 
@@ -193,12 +206,6 @@ async function save() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-.field label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
 }
 .field-row {
   display: grid;
@@ -222,5 +229,10 @@ async function save() {
 }
 .w-full {
   width: 100%;
+}
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

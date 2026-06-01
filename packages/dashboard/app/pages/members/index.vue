@@ -128,12 +128,13 @@ onMounted(() => fetchAll());
       data-key="_id"
       lazy
       paginator
+      scrollable
       striped-rows
       :rows-per-page-options="[10, 20, 50]"
       @page="onPage"
     >
       <template #empty>
-        <div class="empty-state">No members found.</div>
+        <div class="empty-state" role="status">No members found.</div>
       </template>
 
       <Column field="userId.firstName" header="First Name">
@@ -160,8 +161,8 @@ onMounted(() => fetchAll());
       <Column header="Actions" style="width: 120px">
         <template #body="{ data }">
           <div style="display: flex; gap: 0.5rem">
-            <Button icon="pi pi-pencil" severity="secondary" text rounded @click="openEdit(data)" />
-            <Button icon="pi pi-trash" severity="danger" text rounded @click="confirmDelete(data)" />
+            <Button icon="pi pi-pencil" severity="secondary" text rounded aria-label="Edit member" @click="openEdit(data)" />
+            <Button icon="pi pi-trash" severity="danger" text rounded aria-label="Archive member" @click="confirmDelete(data)" />
           </div>
         </template>
       </Column>

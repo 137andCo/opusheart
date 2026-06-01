@@ -63,7 +63,7 @@
           rel="noopener noreferrer"
           class="video-link"
         >
-          Watch Video
+          Watch Video<span class="sr-only"> (opens in new tab)</span>
         </a>
       </div>
 

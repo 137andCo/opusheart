@@ -27,6 +27,7 @@ const defaultForm = () => ({
 });
 
 const form = ref(defaultForm());
+const errors = reactive<Record<string, string>>({ title: '' });
 
 const visibilityOptions = [
   { label: 'Public', value: 'public' },
@@ -41,6 +42,7 @@ watch(
   () => props.visible,
   (val) => {
     if (!val) return;
+    errors.title = '';
     if (props.event) {
       form.value = {
         title: props.event.title || '',
@@ -76,8 +78,9 @@ function closeDialog() {
 }
 
 async function save() {
+  errors.title = '';
   if (!form.value.title.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Title is required', life: 3000 });
+    errors.title = 'Title is required.';
     return;
   }
 
@@ -130,84 +133,94 @@ async function save() {
     :header="dialogTitle"
     modal
     :closable="true"
-    :style="{ width: '650px' }"
+    :style="{ width: '650px', maxWidth: '92vw' }"
     @update:visible="closeDialog"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label>Title *</label>
-        <InputText v-model="form.title" class="w-full" placeholder="Event title" />
-      </div>
+      <FormField label="Title" required :error="errors.title">
+        <template #default="{ id, describedby, invalid }">
+          <InputText :id="id" v-model="form.title" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Event title" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Description</label>
-        <Textarea v-model="form.description" class="w-full" :rows="3" placeholder="Event description" />
-      </div>
+      <FormField label="Description">
+        <template #default="{ id }">
+          <Textarea :id="id" v-model="form.description" class="w-full" :rows="3" placeholder="Event description" />
+        </template>
+      </FormField>
 
       <div class="field-checkbox">
-        <InputSwitch v-model="form.allDay" />
-        <label>All Day</label>
+        <InputSwitch input-id="event-all-day" v-model="form.allDay" />
+        <label for="event-all-day">All Day</label>
       </div>
 
       <div class="field-row">
-        <div class="field">
-          <label>Start Date</label>
-          <Calendar
-            v-model="form.startDate"
-            class="w-full"
-            :show-time="!form.allDay"
-            date-format="mm/dd/yy"
-            placeholder="Start date"
-          />
-        </div>
-        <div class="field">
-          <label>End Date</label>
-          <Calendar
-            v-model="form.endDate"
-            class="w-full"
-            :show-time="!form.allDay"
-            date-format="mm/dd/yy"
-            placeholder="End date"
-          />
-        </div>
+        <FormField label="Start Date">
+          <template #default="{ id }">
+            <Calendar
+              :input-id="id"
+              v-model="form.startDate"
+              class="w-full"
+              :show-time="!form.allDay"
+              date-format="mm/dd/yy"
+              placeholder="Start date"
+            />
+          </template>
+        </FormField>
+        <FormField label="End Date">
+          <template #default="{ id }">
+            <Calendar
+              :input-id="id"
+              v-model="form.endDate"
+              class="w-full"
+              :show-time="!form.allDay"
+              date-format="mm/dd/yy"
+              placeholder="End date"
+            />
+          </template>
+        </FormField>
       </div>
 
-      <div class="field">
-        <label>Location</label>
-        <InputText v-model="form.location" class="w-full" placeholder="Event location" />
-      </div>
+      <FormField label="Location">
+        <template #default="{ id }">
+          <InputText :id="id" v-model="form.location" class="w-full" placeholder="Event location" />
+        </template>
+      </FormField>
 
       <div class="field-row">
-        <div class="field">
-          <label>Visibility</label>
-          <Dropdown
-            v-model="form.visibility"
-            :options="visibilityOptions"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-          />
-        </div>
-        <div class="field">
-          <label>Max Attendees</label>
-          <InputNumber v-model="form.maxAttendees" class="w-full" :min="1" placeholder="Unlimited" />
-        </div>
+        <FormField label="Visibility">
+          <template #default="{ id }">
+            <Dropdown
+              :input-id="id"
+              v-model="form.visibility"
+              :options="visibilityOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+            />
+          </template>
+        </FormField>
+        <FormField label="Max Attendees">
+          <template #default="{ id }">
+            <InputNumber :input-id="id" v-model="form.maxAttendees" class="w-full" :min="1" placeholder="Unlimited" />
+          </template>
+        </FormField>
       </div>
 
       <div class="field-checkbox">
-        <InputSwitch v-model="form.registrationRequired" />
-        <label>Registration Required</label>
+        <InputSwitch input-id="event-registration" v-model="form.registrationRequired" />
+        <label for="event-registration">Registration Required</label>
       </div>
 
       <div>
         <div class="section-header">
-          <label style="font-weight: 500; font-size: 0.875rem">Volunteer Slots</label>
+          <span class="section-title">Volunteer Slots</span>
           <Button label="Add Slot" icon="pi pi-plus" text size="small" @click="addSlot" />
         </div>
         <div v-for="(slot, idx) in form.volunteerSlots" :key="idx" class="volunteer-row">
-          <InputText v-model="slot.role" placeholder="Role name" style="flex: 1" />
-          <InputNumber v-model="slot.needed" :min="1" placeholder="Needed" style="width: 6rem" />
-          <Button icon="pi pi-times" text rounded severity="danger" size="small" @click="removeSlot(idx)" />
+          <InputText v-model="slot.role" placeholder="Role name" style="flex: 1" :aria-label="`Volunteer role ${idx + 1}`" />
+          <InputNumber v-model="slot.needed" :min="1" placeholder="Needed" style="width: 6rem" :aria-label="`Number needed for volunteer role ${idx + 1}`" />
+          <Button icon="pi pi-times" text rounded severity="danger" size="small" :aria-label="`Remove volunteer slot ${idx + 1}`" @click="removeSlot(idx)" />
         </div>
         <div v-if="form.volunteerSlots.length === 0" class="empty-slots">
           No volunteer slots added.
@@ -230,12 +243,6 @@ async function save() {
   flex-direction: column;
   gap: 1rem;
 }
-.field label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-}
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -254,6 +261,10 @@ async function save() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.section-title {
+  font-weight: 600;
+  font-size: 0.875rem;
 }
 .volunteer-row {
   display: flex;
@@ -275,5 +286,10 @@ async function save() {
 }
 .w-full {
   width: 100%;
+}
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

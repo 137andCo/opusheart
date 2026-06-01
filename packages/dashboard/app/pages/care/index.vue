@@ -31,6 +31,14 @@ const memberSearching = ref(false);
 const hasSearched = ref(false);
 const selectedMember = ref<MemberRecord | null>(null);
 
+const searchStatus = computed(() => {
+  if (memberSearching.value) return 'Searching members…';
+  if (!hasSearched.value) return '';
+  if (memberResults.value.length === 0) return 'No members found.';
+  const n = memberResults.value.length;
+  return `${n} member${n === 1 ? '' : 's'} found.`;
+});
+
 async function searchMembers() {
   const q = memberQuery.value.trim();
   if (!q) return;
@@ -218,18 +226,20 @@ function authorName(note: CareNote): string {
         />
         <Button label="Search" icon="pi pi-search" :loading="memberSearching" @click="searchMembers" />
       </div>
+      <p class="sr-only" aria-live="polite">{{ searchStatus }}</p>
       <div v-if="memberResults.length" class="member-results">
-        <div
+        <button
           v-for="m in memberResults"
           :key="m._id"
+          type="button"
           class="member-result-item"
           @click="selectMember(m)"
         >
-          <i class="pi pi-user" />
+          <i class="pi pi-user" aria-hidden="true" />
           <span>{{ memberName(m) }}</span>
-        </div>
+        </button>
       </div>
-      <div v-if="memberResults.length === 0 && hasSearched && !memberSearching" class="empty-state">
+      <div v-if="memberResults.length === 0 && hasSearched && !memberSearching" class="empty-state" role="status">
         No members found.
       </div>
     </div>
@@ -317,7 +327,7 @@ function authorName(note: CareNote): string {
         <Column header="Actions" style="width: 100px">
           <template #body="{ data }">
             <div class="action-buttons">
-              <Button icon="pi pi-pencil" severity="info" text rounded @click="openEdit(data)" />
+              <Button icon="pi pi-pencil" severity="info" text rounded aria-label="Edit care note" @click="openEdit(data)" />
               <Button
                 v-if="!data.resolved"
                 icon="pi pi-check"
@@ -325,6 +335,7 @@ function authorName(note: CareNote): string {
                 text
                 rounded
                 v-tooltip.top="'Mark Resolved'"
+                aria-label="Mark care note resolved"
                 @click="resolveNote(data)"
               />
             </div>
@@ -362,6 +373,12 @@ function authorName(note: CareNote): string {
   padding: 0.625rem 0.75rem;
   cursor: pointer;
   transition: background-color 0.15s;
+  width: 100%;
+  text-align: start;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
 }
 .member-result-item:hover {
   background-color: var(--p-highlight-background);

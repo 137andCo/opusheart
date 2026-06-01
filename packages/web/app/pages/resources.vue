@@ -43,6 +43,7 @@
     </div>
 
     <section v-else aria-labelledby="resources-heading">
+      <p class="sr-only" aria-live="polite">{{ resultStatus }}</p>
       <div class="resource-grid">
         <article
           v-for="resource in resources"
@@ -79,7 +80,7 @@
               v-if="resource.phone"
               :href="'tel:' + resource.phone"
               class="contact-link"
-              :aria-label="'Call ' + resource.name"
+              :aria-label="'Call ' + resource.name + ': ' + resource.phone"
             >
               {{ resource.phone }}
             </a>
@@ -87,7 +88,7 @@
               v-if="resource.email"
               :href="'mailto:' + resource.email"
               class="contact-link"
-              :aria-label="'Email ' + resource.name"
+              :aria-label="'Email ' + resource.name + ': ' + resource.email"
             >
               {{ resource.email }}
             </a>
@@ -97,7 +98,7 @@
               target="_blank"
               rel="noopener noreferrer"
               class="contact-link"
-              :aria-label="'Visit ' + resource.name + ' website'"
+              :aria-label="'Visit ' + resource.name + ' website (opens in new tab)'"
             >
               Website
             </a>
@@ -195,6 +196,12 @@ const { data, pending } = await useFetch<{
 
 const resources = computed(() => data.value?.resources || []);
 const totalPages = computed(() => data.value?.pagination?.pages || 1);
+
+const resultStatus = computed(() => {
+  if (pending.value) return 'Loading…';
+  if (resources.value.length === 0) return 'No results found.';
+  return `${resources.value.length} result(s)`;
+});
 
 function formatCategory(cat: string) {
   return cat

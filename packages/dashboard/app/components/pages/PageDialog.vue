@@ -26,6 +26,7 @@ const defaultForm = () => ({
 });
 
 const form = ref(defaultForm());
+const errors = reactive<Record<string, string>>({ title: '', slug: '' });
 
 const statusOptions = [
   { label: 'Draft', value: 'draft' },
@@ -54,6 +55,8 @@ watch(
   () => props.visible,
   (val) => {
     if (!val) return;
+    errors.title = '';
+    errors.slug = '';
     if (props.page) {
       form.value = {
         title: props.page.title || '',
@@ -76,16 +79,14 @@ function closeDialog() {
   emit('update:visible', false);
 }
 
-async function save() {
-  if (!form.value.title.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Title is required', life: 3000 });
-    return;
-  }
+function validate(): boolean {
+  errors.title = form.value.title.trim() ? '' : 'Title is required.';
+  errors.slug = form.value.slug.trim() ? '' : 'Slug is required.';
+  return !Object.values(errors).some(Boolean);
+}
 
-  if (!form.value.slug.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Slug is required', life: 3000 });
-    return;
-  }
+async function save() {
+  if (!validate()) return;
 
   saving.value = true;
   try {
@@ -133,52 +134,58 @@ async function save() {
     :header="dialogTitle"
     modal
     :closable="true"
-    :style="{ width: '650px' }"
+    :style="{ width: '650px', maxWidth: '92vw' }"
     @update:visible="closeDialog"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label>Title *</label>
-        <InputText v-model="form.title" class="w-full" placeholder="Page title" />
-      </div>
+      <FormField label="Title" required :error="errors.title">
+        <template #default="{ id, describedby, invalid }">
+          <InputText :id="id" v-model="form.title" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Page title" />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Slug *</label>
-        <InputText v-model="form.slug" class="w-full" placeholder="page-url-slug" />
-        <small class="slug-hint">Auto-generated from title. Edit to customise.</small>
-      </div>
+      <FormField label="Slug" required :error="errors.slug" hint="Auto-generated from title. Edit to customise.">
+        <template #default="{ id, describedby, invalid }">
+          <InputText :id="id" v-model="form.slug" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="page-url-slug" />
+        </template>
+      </FormField>
 
       <div class="field-row">
-        <div class="field">
-          <label>Status</label>
-          <Dropdown
-            v-model="form.status"
-            :options="statusOptions"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-          />
-        </div>
-        <div class="field">
-          <label>Locale</label>
-          <InputText v-model="form.locale" class="w-full" placeholder="en" />
-        </div>
+        <FormField label="Status">
+          <template #default="{ id }">
+            <Dropdown
+              :input-id="id"
+              v-model="form.status"
+              :options="statusOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+            />
+          </template>
+        </FormField>
+        <FormField label="Locale">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.locale" class="w-full" placeholder="en" />
+          </template>
+        </FormField>
       </div>
 
       <div class="seo-section">
         <div class="section-header">
-          <label class="section-label">SEO Settings</label>
+          <span class="section-label">SEO Settings</span>
         </div>
 
-        <div class="field">
-          <label>SEO Title</label>
-          <InputText v-model="form.seo.title" class="w-full" placeholder="Override page title for search engines" />
-        </div>
+        <FormField label="SEO Title">
+          <template #default="{ id }">
+            <InputText :id="id" v-model="form.seo.title" class="w-full" placeholder="Override page title for search engines" />
+          </template>
+        </FormField>
 
-        <div class="field">
-          <label>Meta Description</label>
-          <Textarea v-model="form.seo.description" class="w-full" :rows="2" placeholder="Brief description for search results" />
-        </div>
+        <FormField label="Meta Description">
+          <template #default="{ id }">
+            <Textarea :id="id" v-model="form.seo.description" class="w-full" :rows="2" placeholder="Brief description for search results" />
+          </template>
+        </FormField>
 
         <div class="field-checkbox">
           <Checkbox v-model="form.seo.noIndex" :binary="true" input-id="noIndex" />
@@ -202,12 +209,6 @@ async function save() {
   flex-direction: column;
   gap: 1rem;
 }
-.field label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-}
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -221,12 +222,6 @@ async function save() {
 .field-checkbox label {
   font-weight: 500;
   font-size: 0.875rem;
-}
-.slug-hint {
-  display: block;
-  margin-top: 0.25rem;
-  color: var(--p-text-muted-color);
-  font-size: 0.8rem;
 }
 .seo-section {
   border-top: 1px solid var(--p-surface-200);
@@ -252,5 +247,10 @@ async function save() {
 }
 .w-full {
   width: 100%;
+}
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

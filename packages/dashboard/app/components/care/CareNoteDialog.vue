@@ -36,11 +36,13 @@ const form = ref({
 });
 
 const saving = ref(false);
+const errors = reactive<Record<string, string>>({ content: '' });
 const isEdit = computed(() => !!props.note);
 const dialogTitle = computed(() => isEdit.value ? 'Edit Care Note' : 'New Care Note');
 
 watch(() => props.visible, (val) => {
   if (val) {
+    errors.content = '';
     if (props.note) {
       form.value = {
         type: props.note.type,
@@ -53,11 +55,13 @@ watch(() => props.visible, (val) => {
   }
 });
 
+function validate(): boolean {
+  errors.content = form.value.content.trim() ? '' : 'Content is required.';
+  return !Object.values(errors).some(Boolean);
+}
+
 async function save() {
-  if (!form.value.content.trim()) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Content is required', life: 3000 });
-    return;
-  }
+  if (!validate()) return;
 
   saving.value = true;
   try {
@@ -97,30 +101,34 @@ function close() {
     :visible="visible"
     :header="dialogTitle"
     modal
-    :style="{ width: '500px' }"
+    :style="{ width: '500px', maxWidth: '92vw' }"
     @update:visible="close"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label>Type</label>
-        <Dropdown
-          v-model="form.type"
-          :options="typeOptions"
-          option-label="label"
-          option-value="value"
-          class="w-full"
-        />
-      </div>
+      <FormField label="Type">
+        <template #default="{ id }">
+          <Dropdown
+            :input-id="id"
+            v-model="form.type"
+            :options="typeOptions"
+            option-label="label"
+            option-value="value"
+            class="w-full"
+          />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Content *</label>
-        <Textarea v-model="form.content" rows="5" class="w-full" placeholder="Describe the care note..." />
-      </div>
+      <FormField label="Content" required :error="errors.content">
+        <template #default="{ id, describedby, invalid }">
+          <Textarea :id="id" v-model="form.content" rows="5" class="w-full" :aria-describedby="describedby" :invalid="invalid" placeholder="Describe the care note..." />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label>Follow-up Date</label>
-        <DatePicker v-model="form.followUpDate" date-format="M dd, yy" show-icon class="w-full" />
-      </div>
+      <FormField label="Follow-up Date">
+        <template #default="{ id }">
+          <DatePicker :input-id="id" v-model="form.followUpDate" date-format="M dd, yy" show-icon class="w-full" />
+        </template>
+      </FormField>
     </div>
 
     <template #footer>
@@ -135,15 +143,6 @@ function close() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.field label {
-  font-weight: 600;
-  font-size: 0.875rem;
 }
 .w-full {
   width: 100%;

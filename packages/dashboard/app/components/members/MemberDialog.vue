@@ -20,6 +20,8 @@ const form = reactive({
   attendanceOptIn: false,
 });
 
+const errors = reactive<Record<string, string>>({ userId: '' });
+
 const statusOptions = [
   { label: 'Active', value: 'active' },
   { label: 'Inactive', value: 'inactive' },
@@ -31,6 +33,7 @@ const dialogTitle = computed(() => isEdit.value ? 'Edit Member' : 'Add Member');
 
 watch(() => props.visible, (val) => {
   if (val) {
+    errors.userId = '';
     if (props.member) {
       form.userId = props.member.userId?._id || props.member.userId || '';
       form.membershipStatus = props.member.membershipStatus || 'visitor';
@@ -48,6 +51,11 @@ function close() {
 }
 
 async function save() {
+  errors.userId = '';
+  if (!isEdit.value && !form.userId.trim()) {
+    errors.userId = 'User ID is required.';
+    return;
+  }
   saving.value = true;
   try {
     if (isEdit.value) {
@@ -60,11 +68,6 @@ async function save() {
       });
       toast.add({ severity: 'success', summary: 'Updated', detail: 'Member updated successfully', life: 3000 });
     } else {
-      if (!form.userId.trim()) {
-        toast.add({ severity: 'error', summary: 'Validation', detail: 'User ID is required', life: 4000 });
-        saving.value = false;
-        return;
-      }
       await api('/api/members', {
         method: 'POST',
         body: {
@@ -90,31 +93,47 @@ async function save() {
     :visible="visible"
     :header="dialogTitle"
     modal
-    :style="{ width: '500px' }"
+    :style="{ width: '500px', maxWidth: '92vw' }"
     @update:visible="emit('update:visible', $event)"
   >
     <div class="dialog-form">
-      <div v-if="!isEdit" class="field">
-        <label for="userId">User ID</label>
-        <InputText id="userId" v-model="form.userId" class="w-full" placeholder="Enter user ID" />
-      </div>
+      <FormField
+        v-if="!isEdit"
+        label="User ID"
+        required
+        :error="errors.userId"
+        hint="The account ID of the person to enroll as a member."
+      >
+        <template #default="{ id, describedby, invalid }">
+          <InputText
+            :id="id"
+            v-model="form.userId"
+            class="w-full"
+            :aria-describedby="describedby"
+            :invalid="invalid"
+            placeholder="Enter user ID"
+          />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label for="status">Membership Status</label>
-        <Dropdown
-          id="status"
-          v-model="form.membershipStatus"
-          :options="statusOptions"
-          option-label="label"
-          option-value="value"
-          class="w-full"
-        />
-      </div>
+      <FormField label="Membership Status">
+        <template #default="{ id }">
+          <Dropdown
+            :input-id="id"
+            v-model="form.membershipStatus"
+            :options="statusOptions"
+            option-label="label"
+            option-value="value"
+            class="w-full"
+          />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label for="attendanceOptIn">Attendance Opt-In</label>
-        <InputSwitch id="attendanceOptIn" v-model="form.attendanceOptIn" />
-      </div>
+      <FormField label="Attendance Opt-In">
+        <template #default="{ id }">
+          <InputSwitch :input-id="id" v-model="form.attendanceOptIn" />
+        </template>
+      </FormField>
     </div>
 
     <template #footer>
@@ -128,7 +147,6 @@ async function save() {
 
 <style scoped>
 .dialog-form { display: flex; flex-direction: column; gap: 1rem; }
-.field label { display: block; font-weight: 500; margin-bottom: 0.5rem; font-size: 0.875rem; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 0.5rem; }
 .w-full { width: 100%; }
 </style>

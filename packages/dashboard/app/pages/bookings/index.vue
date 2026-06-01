@@ -199,12 +199,13 @@ onMounted(() => {
           data-key="_id"
           lazy
           paginator
+          scrollable
           striped-rows
           :rows-per-page-options="[10, 20, 50]"
           @page="onPage"
         >
           <template #empty>
-            <div class="empty-state">No bookings found.</div>
+            <div class="empty-state" role="status">No bookings found.</div>
           </template>
 
           <Column field="title" header="Title" />
@@ -240,6 +241,7 @@ onMounted(() => {
                   text
                   rounded
                   severity="danger"
+                  aria-label="Cancel booking"
                   v-tooltip.top="'Cancel'"
                   @click="confirmCancelBooking(data)"
                 />
@@ -254,10 +256,11 @@ onMounted(() => {
           :value="resources"
           :loading="resourcesLoading"
           data-key="_id"
+          scrollable
           striped-rows
         >
           <template #empty>
-            <div class="empty-state">No resources found.</div>
+            <div class="empty-state" role="status">No resources found.</div>
           </template>
 
           <Column field="name" header="Name" />

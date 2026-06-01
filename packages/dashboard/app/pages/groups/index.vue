@@ -119,12 +119,13 @@ onMounted(() => {
       data-key="_id"
       lazy
       paginator
+      scrollable
       striped-rows
       :rows-per-page-options="[10, 20, 50]"
       @page="onPage"
     >
       <template #empty>
-        <div class="empty-state">No groups found.</div>
+        <div class="empty-state" role="status">No groups found.</div>
       </template>
 
       <Column field="name" header="Name" />
@@ -148,8 +149,8 @@ onMounted(() => {
       <Column header="Actions" style="width: 8rem">
         <template #body="{ data }">
           <div class="action-buttons">
-            <Button icon="pi pi-pencil" text rounded severity="info" @click="openEdit(data)" />
-            <Button icon="pi pi-trash" text rounded severity="danger" @click="confirmDelete(data)" />
+            <Button icon="pi pi-pencil" text rounded severity="info" aria-label="Edit group" @click="openEdit(data)" />
+            <Button icon="pi pi-trash" text rounded severity="danger" aria-label="Delete group" @click="confirmDelete(data)" />
           </div>
         </template>
       </Column>

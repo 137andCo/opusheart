@@ -37,6 +37,7 @@ const defaultForm = () => ({
 });
 
 const form = ref(defaultForm());
+const errors = reactive<Record<string, string>>({ amount: '', fund: '' });
 
 const fundOptions = computed(() =>
   props.fundsList.map((f: any) => ({ label: f.name, value: f._id || f.id })),
@@ -46,6 +47,8 @@ watch(
   () => props.visible,
   (val) => {
     if (!val) return;
+    errors.amount = '';
+    errors.fund = '';
     form.value = defaultForm();
   },
 );
@@ -54,15 +57,14 @@ function closeDialog() {
   emit('update:visible', false);
 }
 
+function validate(): boolean {
+  errors.amount = form.value.amount && form.value.amount > 0 ? '' : 'Amount must be greater than 0.';
+  errors.fund = form.value.fund ? '' : 'Fund is required.';
+  return !Object.values(errors).some(Boolean);
+}
+
 async function save() {
-  if (!form.value.amount || form.value.amount <= 0) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Amount must be greater than 0', life: 3000 });
-    return;
-  }
-  if (!form.value.fund) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Fund is required', life: 3000 });
-    return;
-  }
+  if (!validate()) return;
 
   saving.value = true;
   try {
@@ -107,61 +109,71 @@ async function save() {
     header="Record Donation"
     modal
     :closable="true"
-    :style="{ width: '550px' }"
+    :style="{ width: '550px', maxWidth: '92vw' }"
     @update:visible="closeDialog"
   >
     <div class="dialog-form">
       <div class="field-row">
-        <div class="field">
-          <label>Amount *</label>
-          <InputNumber v-model="form.amount" class="w-full" mode="currency" currency="USD" locale="en-US" placeholder="0.00" />
-        </div>
-        <div class="field">
-          <label>Method</label>
+        <FormField label="Amount" required :error="errors.amount">
+          <template #default="{ id, describedby, invalid }">
+            <InputNumber :input-id="id" v-model="form.amount" class="w-full" mode="currency" currency="USD" locale="en-US" :aria-describedby="describedby" :invalid="invalid" placeholder="0.00" />
+          </template>
+        </FormField>
+        <FormField label="Method">
+          <template #default="{ id }">
+            <Dropdown
+              :input-id="id"
+              v-model="form.method"
+              :options="methodOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+            />
+          </template>
+        </FormField>
+      </div>
+
+      <FormField label="Fund" required :error="errors.fund">
+        <template #default="{ id, describedby, invalid }">
           <Dropdown
-            v-model="form.method"
-            :options="methodOptions"
+            :input-id="id"
+            v-model="form.fund"
+            :options="fundOptions"
             option-label="label"
             option-value="value"
             class="w-full"
+            :aria-describedby="describedby"
+            :invalid="invalid"
+            placeholder="Select fund"
           />
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Fund *</label>
-        <Dropdown
-          v-model="form.fund"
-          :options="fundOptions"
-          option-label="label"
-          option-value="value"
-          class="w-full"
-          placeholder="Select fund"
-        />
-      </div>
+        </template>
+      </FormField>
 
       <div class="field-row">
-        <div class="field field-switch">
-          <label>Recurring</label>
-          <InputSwitch v-model="form.recurring" />
+        <div class="field-switch">
+          <InputSwitch input-id="donation-recurring" v-model="form.recurring" />
+          <label for="donation-recurring">Recurring</label>
         </div>
-        <div v-if="form.recurring" class="field">
-          <label>Schedule</label>
-          <Dropdown
-            v-model="form.recurringSchedule"
-            :options="scheduleOptions"
-            option-label="label"
-            option-value="value"
-            class="w-full"
-            placeholder="Select schedule"
-          />
-        </div>
+        <FormField v-if="form.recurring" label="Schedule">
+          <template #default="{ id }">
+            <Dropdown
+              :input-id="id"
+              v-model="form.recurringSchedule"
+              :options="scheduleOptions"
+              option-label="label"
+              option-value="value"
+              class="w-full"
+              placeholder="Select schedule"
+            />
+          </template>
+        </FormField>
       </div>
 
-      <div class="field">
-        <label>Notes</label>
-        <Textarea v-model="form.notes" class="w-full" :rows="3" placeholder="Optional notes" />
-      </div>
+      <FormField label="Notes">
+        <template #default="{ id }">
+          <Textarea :id="id" v-model="form.notes" class="w-full" :rows="3" placeholder="Optional notes" />
+        </template>
+      </FormField>
     </div>
 
     <template #footer>
@@ -179,12 +191,6 @@ async function save() {
   flex-direction: column;
   gap: 1rem;
 }
-.field label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-}
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -192,8 +198,12 @@ async function save() {
 }
 .field-switch {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+}
+.field-switch label {
+  font-weight: 500;
+  font-size: 0.875rem;
 }
 .dialog-actions {
   display: flex;
@@ -203,5 +213,10 @@ async function save() {
 }
 .w-full {
   width: 100%;
+}
+@media (max-width: 640px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

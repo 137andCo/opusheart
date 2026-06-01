@@ -71,54 +71,58 @@ function close() {
     header="New Resource"
     :modal="true"
     :closable="true"
-    :style="{ width: '450px' }"
+    :style="{ width: '450px', maxWidth: '92vw' }"
     @update:visible="close"
   >
     <div class="dialog-form">
-      <div class="field">
-        <label for="resource-name">Name *</label>
-        <InputText
-          id="resource-name"
-          v-model="form.name"
-          class="w-full"
-          placeholder="Resource name"
-        />
-      </div>
+      <FormField label="Name" required>
+        <template #default="{ id }">
+          <InputText
+            :id="id"
+            v-model="form.name"
+            class="w-full"
+            placeholder="Resource name"
+          />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label for="resource-type">Type *</label>
-        <Dropdown
-          id="resource-type"
-          v-model="form.type"
-          :options="typeOptions"
-          option-label="label"
-          option-value="value"
-          placeholder="Select type"
-          class="w-full"
-        />
-      </div>
+      <FormField label="Type" required>
+        <template #default="{ id }">
+          <Dropdown
+            :input-id="id"
+            v-model="form.type"
+            :options="typeOptions"
+            option-label="label"
+            option-value="value"
+            placeholder="Select type"
+            class="w-full"
+          />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label for="resource-description">Description</label>
-        <Textarea
-          id="resource-description"
-          v-model="form.description"
-          class="w-full"
-          rows="3"
-          placeholder="Optional description"
-        />
-      </div>
+      <FormField label="Description">
+        <template #default="{ id }">
+          <Textarea
+            :id="id"
+            v-model="form.description"
+            class="w-full"
+            rows="3"
+            placeholder="Optional description"
+          />
+        </template>
+      </FormField>
 
-      <div class="field">
-        <label for="resource-capacity">Capacity</label>
-        <InputNumber
-          id="resource-capacity"
-          v-model="form.capacity"
-          class="w-full"
-          placeholder="e.g. 50"
-          :min="0"
-        />
-      </div>
+      <FormField label="Capacity">
+        <template #default="{ id }">
+          <InputNumber
+            :input-id="id"
+            v-model="form.capacity"
+            class="w-full"
+            placeholder="e.g. 50"
+            :min="0"
+          />
+        </template>
+      </FormField>
     </div>
 
     <template #footer>
@@ -133,15 +137,6 @@ function close() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.field label {
-  font-weight: 600;
-  font-size: 0.875rem;
 }
 .w-full {
   width: 100%;

@@ -31,6 +31,7 @@
     </div>
 
     <section v-else aria-labelledby="groups-heading">
+      <p class="sr-only" aria-live="polite">{{ resultStatus }}</p>
       <div class="group-grid">
         <article
           v-for="group in groups"
@@ -139,6 +140,12 @@ const { data, pending } = await useFetch<{
 
 const groups = computed(() => data.value?.groups || []);
 const totalPages = computed(() => data.value?.pagination?.pages || 1);
+
+const resultStatus = computed(() => {
+  if (pending.value) return 'Loading…';
+  if (groups.value.length === 0) return 'No results found.';
+  return `${groups.value.length} result(s)`;
+});
 
 function formatType(type: string) {
   const map: Record<string, string> = {

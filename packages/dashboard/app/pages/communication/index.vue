@@ -198,12 +198,13 @@ onMounted(() => {
       data-key="_id"
       lazy
       paginator
+      scrollable
       striped-rows
       :rows-per-page-options="[10, 20, 50]"
       @page="onPage"
     >
       <template #empty>
-        <div class="empty-state">No messages found.</div>
+        <div class="empty-state" role="status">No messages found.</div>
       </template>
 
       <Column field="subject" header="Subject" />
@@ -236,6 +237,7 @@ onMounted(() => {
               text
               rounded
               severity="info"
+              aria-label="Edit message"
               v-tooltip.top="'Edit'"
               @click="openEdit(data)"
             />
@@ -245,6 +247,7 @@ onMounted(() => {
               text
               rounded
               severity="success"
+              aria-label="Send message"
               v-tooltip.top="'Send Now'"
               @click="sendNow(data)"
             />
@@ -254,6 +257,7 @@ onMounted(() => {
               text
               rounded
               severity="warn"
+              aria-label="Cancel scheduled message"
               v-tooltip.top="'Cancel'"
               @click="cancelScheduled(data)"
             />
@@ -263,6 +267,7 @@ onMounted(() => {
               text
               rounded
               severity="danger"
+              aria-label="Delete message"
               v-tooltip.top="'Delete'"
               @click="confirmDelete(data)"
             />
