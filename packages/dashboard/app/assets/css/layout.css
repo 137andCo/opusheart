@@ -218,6 +218,33 @@ body {
 
   .layout-main {
     margin-inline-start: 0;
+    /* Reclaim the side gutters on phones/tablets where space is scarce. */
+    padding: 1rem;
+  }
+}
+
+/* Phone layout: stack page chrome vertically and densify tables.
+   Selectors are elevated to .layout-wrapper .layout-main … (0,3,0) so they win
+   over the per-page scoped `.page-header`/`.page-filters` rules (0,2,0) without
+   resorting to !important. */
+@media (max-width: 640px) {
+  .layout-wrapper .layout-main .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .layout-wrapper .layout-main .page-filters,
+  .layout-wrapper .layout-main .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Denser cells mean a horizontally-scrollable table needs far less scrolling. */
+  .layout-main .p-datatable-thead > tr > th,
+  .layout-main .p-datatable-tbody > tr > td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
   }
 }
 

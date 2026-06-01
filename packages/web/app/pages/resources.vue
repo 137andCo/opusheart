@@ -289,7 +289,9 @@ useHead({
 
 .resource-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  /* 300px floor reflows smoothly on small tablets/large phones (the 340px
+     floor left an awkward single cramped column between ~640-700px). */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
 }
 
