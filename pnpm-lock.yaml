@@ -62,18 +62,6 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
-  packages/builder:
-    dependencies:
-      '@opusheart/shared':
-        specifier: workspace:*
-        version: link:../shared
-
-  packages/connect:
-    dependencies:
-      '@opusheart/shared':
-        specifier: workspace:*
-        version: link:../shared
-
   packages/dashboard:
     dependencies:
       '@opusheart/shared':
@@ -226,12 +214,6 @@ importers:
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
-
-  verticals/church:
-    dependencies:
-      '@opusheart/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
 
 packages:
 

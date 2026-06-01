@@ -117,7 +117,7 @@ Serve the built frontends (`packages/web/.output/server/index.mjs` with Node;
 | `CORS_ORIGINS` | No | localhost | Comma-separated allowed origins |
 | `INSTANCE_NAME` | No | OpusHeart | Your community name |
 | `INSTANCE_URL` | No | localhost:3020 | Public URL of your instance |
-| `VERTICAL` | No | church | Vertical config (church, nonprofit) |
+| `VERTICAL` | No | church | Instance vertical label (currently `church`) |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | No | - | Email delivery (communications, password reset) |
 
 See `.env.example` for the full list including feature toggles, VAPID push, and

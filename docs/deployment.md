@@ -75,20 +75,7 @@ docker stack deploy -c docker-stack.yml opusheart --with-registry-auth
 
 ## 5. Seed Admin User
 
-One-time, after first deploy:
-
-```bash
-# Exec into the running server container
-docker exec -it $(docker ps -qf "name=opusheart_server") sh
-
-# Inside container:
-node -e "
-const mongoose = require('mongoose');
-// ... or run the seed script if bundled
-"
-```
-
-Or build and run the seed as a one-shot service:
+One-time, after first deploy — run the bundled seed as a one-shot service:
 
 ```bash
 docker service create --name opusheart-seed \
@@ -99,6 +86,9 @@ docker service create --name opusheart-seed \
   $REGISTRY/opusheart-server:$TAG \
   node dist/scripts/seed.js
 ```
+
+This creates the starter data and an `admin@opusheart.local` / `ChangeMe123!`
+account — **change that password immediately** after first login.
 
 ## 6. Environment Variables
 
@@ -112,9 +102,9 @@ Required env vars (see `.env.example` for full list):
 | `REDIS_URL` | Yes | Redis connection string |
 | `JWT_SECRET` | Yes | 64-char hex, token signing |
 | `ENCRYPTION_KEY` | Yes | 64-char hex, PII field encryption |
-| `CORS_ORIGINS` | Yes | Comma-separated allowed origins |
-| `INSTANCE_NAME` | Yes | Display name for this church |
-| `INSTANCE_URL` | Yes | Public URL of this instance |
+| `CORS_ORIGINS` | Prod | Comma-separated allowed origins (dev default: localhost) |
+| `INSTANCE_NAME` | Prod | Display name for this community (default: OpusHeart) |
+| `INSTANCE_URL` | Prod | Public URL of this instance (default: localhost:3020) |
 | `FEATURE_*` | No | Feature flags (see `.env.example`) |
 | `MONITORING_TOKEN` | No | Bearer token for `/metrics` endpoint |
 

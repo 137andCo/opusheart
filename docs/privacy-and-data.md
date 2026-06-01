@@ -67,7 +67,7 @@ export, and account deletion. Audit entries have a default 2-year TTL.
 
 ## Retention
 
-Only audit logs (2 years) and refresh tokens (on expiry) auto-expire today.
+Only audit logs (2 years) and password-reset tokens (short TTL) auto-expire today.
 There is no automatic purge of inactive members, old messages, or resolved care
 notes — define and apply a retention schedule appropriate to your community and
 jurisdiction.

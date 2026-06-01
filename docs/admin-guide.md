@@ -88,7 +88,10 @@ When enabled (`FEATURE_GIVING=true`):
 
 ## Federation (Connect)
 
-When enabled, OpusHeart instances can share resources and events:
+**Experimental.** Inbound peer messages are signature-verified with replay
+protection, but outbound peer fan-out is not yet implemented — keep
+`FEATURE_CONNECT` off outside of testing. When enabled, OpusHeart instances are
+intended to share resources and events:
 
 1. Enable `FEATURE_CONNECT=true`
 2. Go to **Settings > Federation**

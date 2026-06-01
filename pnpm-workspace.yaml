@@ -1,6 +1,5 @@
 packages:
   - "packages/*"
-  - "verticals/*"
 
 # pnpm >=9 blocks dependency build scripts by default. argon2 is a native module
 # that must compile on install; allow only the build scripts we trust.
