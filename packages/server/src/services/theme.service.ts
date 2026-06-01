@@ -4,6 +4,8 @@ const DEFAULT_THEME: Record<string, unknown> = {
   primaryColor: '#a8502f',
   secondaryColor: '#6e8160',
   fontFamily: 'Inter, sans-serif',
+  headingFont: '',
+  enableMotion: false,
   customCss: '',
 };
 

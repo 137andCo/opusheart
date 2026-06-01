@@ -4,6 +4,8 @@ export interface ITheme {
   primaryColor: string;
   secondaryColor: string;
   fontFamily: string;
+  headingFont?: string;
+  enableMotion?: boolean;
   logoUrl?: string;
   faviconUrl?: string;
   customCss?: string;
@@ -16,6 +18,8 @@ const themeSchema = new Schema<IThemeDocument>(
     primaryColor: { type: String, default: '#a8502f' },
     secondaryColor: { type: String, default: '#6e8160' },
     fontFamily: { type: String, default: 'Inter, sans-serif' },
+    headingFont: { type: String, default: '' },
+    enableMotion: { type: Boolean, default: false },
     logoUrl: { type: String },
     faviconUrl: { type: String },
     customCss: { type: String, default: '' },

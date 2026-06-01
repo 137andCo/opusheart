@@ -8,6 +8,8 @@ interface ThemeSettings {
   primaryColor: string;
   secondaryColor: string;
   fontFamily: string;
+  headingFont: string;
+  enableMotion: boolean;
   logoUrl?: string;
   faviconUrl?: string;
   customCss?: string;
@@ -20,10 +22,22 @@ const theme = ref<ThemeSettings>({
   primaryColor: '#a8502f',
   secondaryColor: '#6e8160',
   fontFamily: 'Inter, sans-serif',
+  headingFont: '',
+  enableMotion: false,
   logoUrl: '',
   faviconUrl: '',
   customCss: '',
 });
+
+// Curated, offline-safe heading-font stacks (no web-font download needed). The
+// church opts into a distinctive heading look; the default matches the body.
+const headingFontOptions = [
+  { label: 'Same as body (default)', value: '' },
+  { label: 'Classic serif', value: "Georgia, Cambria, 'Times New Roman', serif" },
+  { label: 'Literary serif', value: "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif" },
+  { label: 'Geometric sans', value: "'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif" },
+  { label: 'Humanist sans', value: "Optima, Candara, 'Gill Sans', 'Segoe UI', system-ui, sans-serif" },
+];
 
 async function loadTheme() {
   loading.value = true;
@@ -34,6 +48,8 @@ async function loadTheme() {
         primaryColor: res.theme.primaryColor || '#a8502f',
         secondaryColor: res.theme.secondaryColor || '#6e8160',
         fontFamily: res.theme.fontFamily || 'Inter, sans-serif',
+        headingFont: res.theme.headingFont || '',
+        enableMotion: res.theme.enableMotion ?? false,
         logoUrl: res.theme.logoUrl || '',
         faviconUrl: res.theme.faviconUrl || '',
         customCss: res.theme.customCss || '',
@@ -49,10 +65,12 @@ async function loadTheme() {
 async function saveTheme() {
   saving.value = true;
   try {
-    const payload: Record<string, string> = {
+    const payload: Record<string, unknown> = {
       primaryColor: theme.value.primaryColor,
       secondaryColor: theme.value.secondaryColor,
       fontFamily: theme.value.fontFamily,
+      headingFont: theme.value.headingFont,
+      enableMotion: theme.value.enableMotion,
     };
     if (theme.value.logoUrl) payload.logoUrl = theme.value.logoUrl;
     if (theme.value.faviconUrl) payload.faviconUrl = theme.value.faviconUrl;
@@ -98,8 +116,21 @@ onMounted(loadTheme);
           </div>
 
           <div class="form-field form-field-full">
-            <label for="fontFamily">Font Family</label>
+            <label for="fontFamily">Body Font</label>
             <InputText id="fontFamily" v-model="theme.fontFamily" />
+          </div>
+
+          <div class="form-field form-field-full">
+            <label for="headingFont">Heading Font</label>
+            <Dropdown
+              input-id="headingFont"
+              v-model="theme.headingFont"
+              :options="headingFontOptions"
+              option-label="label"
+              option-value="value"
+              placeholder="Same as body"
+            />
+            <small style="color: var(--p-text-muted-color)">A distinctive heading face adds personality to the public site. The default matches the body font.</small>
           </div>
 
           <div class="form-field form-field-full">
@@ -115,6 +146,14 @@ onMounted(loadTheme);
           <div class="form-field form-field-full">
             <label for="customCss">Custom CSS</label>
             <Textarea id="customCss" v-model="theme.customCss" rows="6" placeholder="/* Custom styles */" />
+          </div>
+
+          <div class="form-field form-field-full">
+            <div style="display: flex; align-items: center; gap: 0.75rem">
+              <InputSwitch input-id="enableMotion" v-model="theme.enableMotion" />
+              <label for="enableMotion">Entrance animation on the public site</label>
+            </div>
+            <small style="color: var(--p-text-muted-color)">A gentle fade-in as pages load. Automatically disabled for visitors who prefer reduced motion.</small>
           </div>
 
           <div class="form-field form-field-full" style="margin-top: 0.5rem">

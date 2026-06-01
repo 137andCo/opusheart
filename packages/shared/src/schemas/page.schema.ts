@@ -52,6 +52,10 @@ export const updateThemeSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   secondaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   fontFamily: z.string().max(200).optional(),
+  // Opt-in "bolder" levers: a distinctive heading typeface and a tasteful
+  // entrance animation. Both default off so the shipped look stays calm.
+  headingFont: z.string().max(200).optional(),
+  enableMotion: z.boolean().optional(),
   logoUrl: z.string().url().optional().nullable(),
   faviconUrl: z.string().url().optional().nullable(),
   customCss: z.string().max(50000).optional(),

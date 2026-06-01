@@ -9,6 +9,7 @@
   --oh-secondary-strong: #4f6b43; /* deeper sage for sage-coloured text (AA) */
   --oh-accent: #cc9a3f;           /* amber gold */
   --oh-font: system-ui, -apple-system, sans-serif;
+  --oh-font-heading: var(--oh-font); /* opt-in distinctive heading face; defaults to the body font */
 
   /* ---- Warm neutrals (tinted toward the clay hue — never pure black/white) ---- */
   --oh-bg: #fcfaf6;        /* warm off-white page background */
@@ -82,6 +83,38 @@ a,
 dd,
 figcaption {
   overflow-wrap: break-word;
+}
+
+/* Headings use the (optionally distinctive) heading font. Default matches the
+   body font, so the shipped look stays calm until an admin opts into a face. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--oh-font-heading);
+}
+
+/* Opt-in entrance motion (Settings -> "Entrance animation"). The .oh-motion
+   class is added to <html> by useTheme; this is wrapped in
+   prefers-reduced-motion: no-preference so it never runs for users who ask for
+   reduced motion. Uses ease-out-quint, not bounce. */
+@media (prefers-reduced-motion: no-preference) {
+  .oh-motion .site-main {
+    animation: oh-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes oh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .skip-to-content {
