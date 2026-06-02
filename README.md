@@ -42,6 +42,9 @@ Monorepo with pnpm workspaces:
 - `packages/dashboard` -- Nuxt 4 SPA (admin)
 - `packages/web` -- Nuxt 4 SSR (public site)
 - `packages/ai` -- AI provider adapters (optional, bring your own key)
+- `packages/builder` -- page-builder block model (block types, schemas, registry)
+- `packages/connect` -- federation client for the Connect mesh protocol
+- `verticals/church` -- church vertical preset: role labels, terminology, and feature defaults (served at `GET /api/vertical`)
 
 ## Features
 

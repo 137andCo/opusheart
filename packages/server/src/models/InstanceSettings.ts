@@ -29,8 +29,8 @@ const instanceSettingsSchema = new Schema<IInstanceSettingsDocument>(
     locale: { type: String, default: 'en' },
     timezone: { type: String, default: 'America/New_York' },
     branding: {
-      primaryColor: { type: String, default: '#1e40af' },
-      secondaryColor: { type: String, default: '#f59e0b' },
+      primaryColor: { type: String, default: '#a8502f' },
+      secondaryColor: { type: String, default: '#6e8160' },
       logoUrl: { type: String },
       faviconUrl: { type: String },
       customCss: { type: String },

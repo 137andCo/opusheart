@@ -4,13 +4,16 @@ WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/ai/package.json packages/ai/
+COPY verticals/church/package.json verticals/church/
 COPY packages/server/package.json packages/server/
 RUN pnpm install --frozen-lockfile
 COPY packages/shared/ packages/shared/
 COPY packages/ai/ packages/ai/
+COPY verticals/church/ verticals/church/
 COPY packages/server/ packages/server/
 RUN pnpm --filter @opusheart/shared build
 RUN pnpm --filter @opusheart/ai build
+RUN pnpm --filter @opusheart/vertical-church build
 RUN pnpm --filter @opusheart/server build
 
 FROM node:24-slim
@@ -22,6 +25,8 @@ COPY --from=build /app/packages/shared/dist ./node_modules/@opusheart/shared/dis
 COPY --from=build /app/packages/shared/package.json ./node_modules/@opusheart/shared/
 COPY --from=build /app/packages/ai/dist ./node_modules/@opusheart/ai/dist
 COPY --from=build /app/packages/ai/package.json ./node_modules/@opusheart/ai/
+COPY --from=build /app/verticals/church/dist ./node_modules/@opusheart/vertical-church/dist
+COPY --from=build /app/verticals/church/package.json ./node_modules/@opusheart/vertical-church/
 COPY --from=build /app/node_modules ./node_modules
 USER appuser
 ENV NODE_ENV=production
