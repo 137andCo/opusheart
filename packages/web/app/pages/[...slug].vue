@@ -45,6 +45,8 @@
 </template>
 
 <script setup lang="ts">
+import { safeBlockHref } from '@opusheart/builder';
+
 const route = useRoute();
 const config = useRuntimeConfig();
 
@@ -60,12 +62,8 @@ const { data, error } = await useFetch<{ page: any }>(
 
 const page = computed(() => data.value?.page);
 
-// Only allow safe schemes for a hero CTA link (block javascript:/data: etc.).
-function ctaHref(href?: string): string | null {
-  if (!href) return null;
-  const h = href.trim();
-  return /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(h) ? h : null;
-}
+// Safe-href validation lives in @opusheart/builder (shared with the editor + server).
+const ctaHref = safeBlockHref;
 
 useHead({
   title: page.value?.seo?.title || page.value?.title || 'Page',

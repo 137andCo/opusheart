@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { BLOCK_DEFINITIONS, BLOCK_TYPES, createBlock, type BlockType } from '@opusheart/builder';
+
 const props = defineProps<{ modelValue: any[] }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: any[]): void }>();
 
@@ -26,29 +28,11 @@ watch(
   { deep: true },
 );
 
-const defaults: Record<string, () => any> = {
-  hero: () => ({
-    type: 'hero',
-    eyebrow: '',
-    heading: '',
-    subheading: '',
-    ctaLabel: '',
-    ctaHref: '',
-    align: 'left',
-  }),
-  heading: () => ({ type: 'heading', text: '', level: 2 }),
-  paragraph: () => ({ type: 'paragraph', text: '' }),
-  image: () => ({ type: 'image', src: '', alt: '', caption: '' }),
-};
+// Block types, labels, and default factories come from @opusheart/builder — the
+// one source of truth shared with the public renderer and the server.
+const addType = ref<BlockType>('hero');
 
-const addType = ref<'hero' | 'heading' | 'paragraph' | 'image'>('hero');
-
-const addTypeOptions = [
-  { label: 'Hero', value: 'hero' },
-  { label: 'Heading', value: 'heading' },
-  { label: 'Paragraph', value: 'paragraph' },
-  { label: 'Image', value: 'image' },
-];
+const addTypeOptions = BLOCK_TYPES.map((t) => ({ label: BLOCK_DEFINITIONS[t].label, value: t }));
 
 const headingLevelOptions = [
   { label: 'H2', value: 2 },
@@ -76,10 +60,8 @@ function remove(i: number) {
   blocks.value.splice(i, 1);
 }
 
-function addBlock(type: string) {
-  const factory = defaults[type];
-  if (!factory) return;
-  blocks.value.push(JSON.parse(JSON.stringify(factory())));
+function addBlock(type: BlockType) {
+  blocks.value.push(JSON.parse(JSON.stringify(createBlock(type))));
 }
 </script>
 

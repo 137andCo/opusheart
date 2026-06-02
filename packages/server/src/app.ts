@@ -16,6 +16,7 @@ import { careRoutes } from './routes/care.js';
 import { pageRoutes } from './routes/pages.js';
 import { templateRoutes } from './routes/templates.js';
 import { verticalRoutes } from './routes/vertical.js';
+import { builderRoutes } from './routes/builder.js';
 import { themeRoutes } from './routes/theme.js';
 import { resourceRoutes } from './routes/resources.js';
 import { submissionRoutes } from './routes/submissions.js';
@@ -114,6 +115,7 @@ export function createApp(config: AppConfig): express.Application {
   app.use('/api/pages', pageRoutes(config));
   app.use('/api/templates', templateRoutes(config));
   app.use('/api/vertical', verticalRoutes(config));
+  app.use('/api/builder', builderRoutes());
   app.use('/api/theme', themeRoutes(config));
 
   // Community resource hub routes

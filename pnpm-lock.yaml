@@ -67,6 +67,9 @@ importers:
       '@opusheart/shared':
         specifier: workspace:*
         version: link:../shared
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
 
   packages/connect:
     dependencies:
@@ -76,6 +79,9 @@ importers:
 
   packages/dashboard:
     dependencies:
+      '@opusheart/builder':
+        specifier: workspace:*
+        version: link:../builder
       '@opusheart/shared':
         specifier: workspace:*
         version: link:../shared
@@ -116,6 +122,9 @@ importers:
       '@opusheart/ai':
         specifier: workspace:*
         version: link:../ai
+      '@opusheart/builder':
+        specifier: workspace:*
+        version: link:../builder
       '@opusheart/shared':
         specifier: workspace:*
         version: link:../shared
@@ -216,6 +225,9 @@ importers:
 
   packages/web:
     dependencies:
+      '@opusheart/builder':
+        specifier: workspace:*
+        version: link:../builder
       '@opusheart/shared':
         specifier: workspace:*
         version: link:../shared

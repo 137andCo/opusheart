@@ -18,6 +18,7 @@ const config: Config = {
     '^@opusheart/shared/(.*)\\.js$': '<rootDir>/packages/shared/src/$1',
     '^@opusheart/shared/(.*)$': '<rootDir>/packages/shared/src/$1',
     '^@opusheart/vertical-church$': '<rootDir>/verticals/church/src/index.ts',
+    '^@opusheart/builder$': '<rootDir>/packages/builder/src/index.ts',
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {

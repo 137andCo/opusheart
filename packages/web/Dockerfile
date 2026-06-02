@@ -3,11 +3,14 @@ RUN corepack enable
 WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/shared/package.json packages/shared/
+COPY packages/builder/package.json packages/builder/
 COPY packages/web/package.json packages/web/
 RUN pnpm install --frozen-lockfile
 COPY packages/shared/ packages/shared/
+COPY packages/builder/ packages/builder/
 COPY packages/web/ packages/web/
 RUN pnpm --filter @opusheart/shared build
+RUN pnpm --filter @opusheart/builder build
 RUN pnpm --filter @opusheart/web build
 
 FROM node:24-slim
