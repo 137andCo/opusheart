@@ -68,6 +68,8 @@ services:
       MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-opusheart}:${MONGO_ROOT_PASSWORD:-devpassword}@mongo:27017/opusheart?authSource=admin
       REDIS_URL: redis://:${REDIS_PASSWORD:-devpassword}@redis:6379
       TRUST_PROXY: "1"
+      # Optional Elasticsearch-backed search (run with --profile app,search). Unset = MongoDB search.
+      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-}
     depends_on:
       mongo: { condition: service_healthy }
       redis: { condition: service_healthy }

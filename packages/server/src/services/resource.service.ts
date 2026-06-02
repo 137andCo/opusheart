@@ -1,5 +1,6 @@
 import { Resource, type IResourceDocument } from '../models/Resource.js';
 import { AppError } from '../utils/errors.js';
+import { searchService } from './search.service.js';
 
 interface ResourceQuery {
   category?: string;
@@ -43,6 +44,7 @@ export class ResourceService {
     }
 
     const resource = await Resource.create(docData);
+    void searchService.indexResource(resource); // best-effort; no-op without ES
     return resource;
   }
 
@@ -137,6 +139,7 @@ export class ResourceService {
 
     Object.assign(resource, data);
     await resource.save();
+    void searchService.indexResource(resource); // keep the search index in sync
     return resource;
   }
 
@@ -146,6 +149,7 @@ export class ResourceService {
       throw new AppError('Resource not found', 404, 'RESOURCE_NOT_FOUND');
     }
     await Resource.deleteOne({ _id: id });
+    void searchService.removeResource(id); // drop it from the search index too
   }
 
   async verify(id: string, verifiedBy: string): Promise<IResourceDocument> {
@@ -157,6 +161,7 @@ export class ResourceService {
     resource.lastVerified = new Date();
     resource.verifiedBy = verifiedBy as any;
     await resource.save();
+    void searchService.indexResource(resource);
     return resource;
   }
 

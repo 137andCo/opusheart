@@ -20,6 +20,7 @@ import { builderRoutes } from './routes/builder.js';
 import { themeRoutes } from './routes/theme.js';
 import { resourceRoutes } from './routes/resources.js';
 import { submissionRoutes } from './routes/submissions.js';
+import { searchRoutes } from './routes/search.js';
 import { messageRoutes } from './routes/messages.js';
 import { eventRoutes } from './routes/events.js';
 import { bookingRoutes } from './routes/bookings.js';
@@ -121,6 +122,7 @@ export function createApp(config: AppConfig): express.Application {
   // Community resource hub routes
   app.use('/api/resources', resourceRoutes(config));
   app.use('/api/submissions', submissionRoutes(config));
+  app.use('/api/search', searchRoutes());
 
   // Communication routes
   app.use('/api/messages', messageRoutes(config));

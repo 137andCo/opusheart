@@ -11,6 +11,7 @@ import { createRedisClient } from './config/redis.js';
 import { createApp } from './app.js';
 import { flushAuditLog } from './services/audit.service.js';
 import { startScheduler, stopScheduler } from './services/scheduler.js';
+import { searchService } from './services/search.service.js';
 import { aiManager } from '@opusheart/ai';
 import pino from 'pino';
 
@@ -31,6 +32,15 @@ async function bootstrap(): Promise<void> {
 
   await connectDatabase(config.mongo.uri);
   createRedisClient(config.redis.url);
+
+  // Optional Elasticsearch search: build/refresh the index from Mongo on boot.
+  // Best-effort and non-blocking — a search outage never stops the server, and
+  // search falls back to MongoDB when ES is unset or unreachable.
+  if (searchService.enabled()) {
+    searchService.reindexAll()
+      .then((n) => logger.info('Search index ready (%d resources indexed)', n))
+      .catch((err) => logger.warn({ err }, 'Search reindex failed — using MongoDB fallback'));
+  }
 
   if (config.features.ai && process.env['AI_PROVIDER'] && process.env['AI_API_KEY']) {
     aiManager.configure({

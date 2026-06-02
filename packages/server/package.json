@@ -17,6 +17,7 @@
     "seed:demo": "tsx src/scripts/demo-seed.ts"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^8.17.0",
     "@opusheart/ai": "workspace:*",
     "@opusheart/builder": "workspace:*",
     "@opusheart/connect": "workspace:*",
