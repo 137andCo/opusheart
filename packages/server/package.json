@@ -19,6 +19,7 @@
   "dependencies": {
     "@opusheart/ai": "workspace:*",
     "@opusheart/builder": "workspace:*",
+    "@opusheart/connect": "workspace:*",
     "@opusheart/shared": "workspace:*",
     "@opusheart/vertical-church": "workspace:*",
     "argon2": "^0.44.0",

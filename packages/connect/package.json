@@ -8,10 +8,11 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'No tests yet'",
-    "test:unit": "echo 'No tests yet'"
+    "test": "cd ../.. && npx jest --config jest.config.ts packages/connect",
+    "test:unit": "cd ../.. && npx jest --config jest.config.ts packages/connect"
   },
   "dependencies": {
-    "@opusheart/shared": "workspace:*"
+    "@opusheart/shared": "workspace:*",
+    "tweetnacl": "^1.0.3"
   }
 }

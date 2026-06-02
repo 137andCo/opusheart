@@ -1,45 +1,43 @@
-import nacl from 'tweetnacl';
+import { generateSigningKeyPair, signMessage, verifyMessage } from '@opusheart/connect';
 
+/**
+ * Stateful wrapper around the Ed25519 primitives in @opusheart/connect — it
+ * holds this instance's loaded keypair (base64) so the federation service can
+ * sign without threading keys through every call. The algorithm itself lives in
+ * the connect protocol package.
+ */
 export class CryptoService {
-  private publicKey: Uint8Array | null = null;
-  private secretKey: Uint8Array | null = null;
+  private publicKey: string | null = null;
+  private secretKey: string | null = null;
 
   generateKeyPair(): { publicKey: string; secretKey: string } {
-    const keyPair = nacl.sign.keyPair();
-    this.publicKey = keyPair.publicKey;
-    this.secretKey = keyPair.secretKey;
-    return {
-      publicKey: Buffer.from(keyPair.publicKey).toString('base64'),
-      secretKey: Buffer.from(keyPair.secretKey).toString('base64'),
-    };
+    const kp = generateSigningKeyPair();
+    this.publicKey = kp.publicKey;
+    this.secretKey = kp.secretKey;
+    return kp;
   }
 
   loadKeyPair(publicKey: string, secretKey: string): void {
-    this.publicKey = new Uint8Array(Buffer.from(publicKey, 'base64'));
-    this.secretKey = new Uint8Array(Buffer.from(secretKey, 'base64'));
+    this.publicKey = publicKey;
+    this.secretKey = secretKey;
   }
 
   sign(message: string): string {
     if (!this.secretKey) {
       throw new Error('No key pair loaded. Call generateKeyPair() or loadKeyPair() first.');
     }
-    const messageBytes = new TextEncoder().encode(message);
-    const signature = nacl.sign.detached(messageBytes, this.secretKey);
-    return Buffer.from(signature).toString('base64');
+    return signMessage(message, this.secretKey);
   }
 
   verify(message: string, signature: string, publicKey: string): boolean {
-    const messageBytes = new TextEncoder().encode(message);
-    const signatureBytes = new Uint8Array(Buffer.from(signature, 'base64'));
-    const publicKeyBytes = new Uint8Array(Buffer.from(publicKey, 'base64'));
-    return nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes);
+    return verifyMessage(message, signature, publicKey);
   }
 
   getPublicKey(): string {
     if (!this.publicKey) {
       throw new Error('No key pair loaded. Call generateKeyPair() or loadKeyPair() first.');
     }
-    return Buffer.from(this.publicKey).toString('base64');
+    return this.publicKey;
   }
 }
 

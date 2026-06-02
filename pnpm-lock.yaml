@@ -76,6 +76,9 @@ importers:
       '@opusheart/shared':
         specifier: workspace:*
         version: link:../shared
+      tweetnacl:
+        specifier: ^1.0.3
+        version: 1.0.3
 
   packages/dashboard:
     dependencies:
@@ -125,6 +128,9 @@ importers:
       '@opusheart/builder':
         specifier: workspace:*
         version: link:../builder
+      '@opusheart/connect':
+        specifier: workspace:*
+        version: link:../connect
       '@opusheart/shared':
         specifier: workspace:*
         version: link:../shared
