@@ -55,7 +55,7 @@ Monorepo with pnpm workspaces:
 - **Communication** — Email and web-push notifications, scheduled sends (SMS planned, bring-your-own-provider)
 - **Prayer Wall** — Community prayer requests with moderation
 - **Sermons** — Archive with podcast RSS feed
-- **Resource Hub** — Public community directory
+- **Resource Hub** — Public community directory with search (Elasticsearch-backed when enabled, MongoDB otherwise)
 - **Giving** — Fund management and donor statements
 - **Connect Federation** — Inter-community collaboration mesh (experimental, off by default)
 - **AI Assistance** — Optional content tools (bring your own API key)
