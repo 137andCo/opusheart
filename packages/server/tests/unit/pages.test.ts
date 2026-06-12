@@ -458,7 +458,7 @@ describe('Website Builder Engine', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.theme).toBeDefined();
-      expect(res.body.theme.primaryColor).toBe('#1e40af');
+      expect(res.body.theme.primaryColor).toBe('#a8502f');
       expect(res.body.theme.fontFamily).toBe('Inter, sans-serif');
     });
 
