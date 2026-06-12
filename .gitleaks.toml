@@ -1,0 +1,20 @@
+# gitleaks configuration for OpusHeart
+#
+# Extends the default ruleset and allowlists ONLY the well-known dummy
+# encryption key used as a fixture across the unit-test suite. It is a
+# non-secret placeholder (repeating "0123456789abcdef") and never the real
+# ENCRYPTION_KEY, which lives in .env (gitignored) and is required at boot.
+#
+# The allowlist targets the specific dummy value, not the test directory, so
+# a genuinely sensitive value committed to a test file would still be flagged.
+
+title = "OpusHeart gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dummy fixture encryption key used only in unit tests (not a real secret)."
+regexes = [
+  '''0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef''',
+]
