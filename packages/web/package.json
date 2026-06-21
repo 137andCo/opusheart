@@ -13,7 +13,7 @@
   "dependencies": {
     "@opusheart/builder": "workspace:*",
     "@opusheart/shared": "workspace:*",
-    "nuxt": "^4.4.6"
+    "nuxt": "^4.4.7"
   },
   "devDependencies": {
     "@vite-pwa/nuxt": "^1.1.1",
